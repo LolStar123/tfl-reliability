@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 360" role="img" aria-labelledby="title desc">
+  <title id="title">TfL reliability</title>
+  <desc id="desc">An instrumentation-style route trace showing live TfL data becoming an Elo reliability signal.</desc>
+  <rect width="1200" height="360" fill="#f7f4ed"/>
+  <g fill="none" stroke="#d6d0c4">
+    <path d="M48 48H1152V312H48Z"/>
+    <path d="M48 92H1152"/>
+    <path d="M892 48V312"/>
+  </g>
+  <g font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="12" letter-spacing="2">
+    <text x="72" y="76" fill="#9a5c08">NETWORK RELIABILITY / LIVE MODEL</text>
+    <text x="916" y="76" fill="#656b72">SYSTEM 01</text>
+  </g>
+  <text x="72" y="164" fill="#14171b" font-family="Arial, Helvetica, sans-serif" font-size="58" font-weight="600" letter-spacing="-2">TfL reliability</text>
+  <text x="75" y="205" fill="#656b72" font-family="Arial, Helvetica, sans-serif" font-size="20">Live service data, ranked as an event stream.</text>
+  <g transform="translate(75 250)" font-family="ui-monospace, SFMono-Regular, Consolas, monospace">
+    <path d="M0 0H140L178-28H344L382 0H548L586-28H752" fill="none" stroke="#b66d09" stroke-width="3"/>
+    <g fill="#f7f4ed" stroke="#b66d09" stroke-width="2">
+      <circle cx="0" cy="0" r="7"/>
+      <circle cx="178" cy="-28" r="7"/>
+      <circle cx="382" cy="0" r="7"/>
+      <circle cx="586" cy="-28" r="7"/>
+      <circle cx="752" cy="-28" r="7"/>
+    </g>
+    <g fill="#656b72" font-size="11" letter-spacing="1.5">
+      <text x="0" y="28">INGEST</text>
+      <text x="151" y="-48">NORMALISE</text>
+      <text x="364" y="28">DETECT</text>
+      <text x="567" y="-48">SCORE</text>
+      <text x="722" y="-48">EXPLAIN</text>
+    </g>
+  </g>
+  <g transform="translate(916 128)" font-family="ui-monospace, SFMono-Regular, Consolas, monospace">
+    <text y="0" fill="#656b72" font-size="11" letter-spacing="1.5">SIGNAL PATH</text>
+    <text y="42" fill="#14171b" font-size="15">TfL API</text>
+    <text y="70" fill="#14171b" font-size="15">SQLite</text>
+    <text y="98" fill="#14171b" font-size="15">Elo model</text>
+    <text y="126" fill="#14171b" font-size="15">Dashboard</text>
+    <circle cx="210" cy="-4" r="5" fill="#b66d09"/>
+    <text x="194" y="28" fill="#9a5c08" font-size="10" letter-spacing="1.5">ACTIVE</text>
+  </g>
+</svg>

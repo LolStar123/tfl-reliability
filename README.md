@@ -1,102 +1,119 @@
-# TfL Reliability — Live Elo Ratings for the London Underground
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/banner-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="assets/banner-light.svg">
+  <img alt="TfL reliability: live service data ranked as an event stream" src="assets/banner-light.svg" width="100%">
+</picture>
 
-A real-time data pipeline that polls Transport for London's open API, persists every
-line- and train-level status snapshot to SQLite, and turns that history into an
-**Elo-style reliability rating** for each Tube line — the same rating maths used to rank
-chess players, applied to which lines actually run on time.
+# TfL reliability
 
-> Built end-to-end: API ingestion → event detection → rating model → persistence →
-> dashboard. No external services; runs from a single `python` command.
+Which Tube line is actually running best? This project polls Transport for London's live
+status and arrival feeds, preserves the observations in SQLite, and converts them into
+Elo-style reliability rankings.
 
----
+The difficult part is temporal: successive predictions must be reconciled into arrivals,
+late trains, and cancellations without scoring the same disruption on every poll. The
+repository includes both a lightweight line-status model and a stop-call event model,
+plus a Streamlit dashboard for inspecting the signal.
 
-## What it does
+## Current readout
 
-- **Ingests** live line-status and per-train arrival predictions from the
-  [TfL Unified API](https://api.tfl.gov.uk) (rate-limit aware, optional app credentials).
-- **Detects events** from successive snapshots — status changes, delays, suspensions,
-  cancellations — rather than trusting a single instantaneous reading.
-- **Rates** each line with an event-driven Elo update: a line "wins" when it holds Good
-  Service and "loses" on disruptions, so a noisy line drifts down and a dependable one
-  climbs. Tunable `--base-elo` and `--k-factor`.
-- **Persists** every snapshot to indexed SQLite for reproducible re-ranking over any
-  lookback window.
-- **Visualises** disruption trends in a Streamlit dashboard.
+This is a real run of `tfl_line_elo.py`, captured at **14:50 UTC on 30 July 2026** from two
+credential-free TfL API polls. The CSV is committed as
+[`tfl_line_elo_leaderboard.csv`](tfl_line_elo_leaderboard.csv).
 
-## Two granularities
+| Position | Line | Elo | Good service | Latest status |
+|---:|---|---:|---:|---|
+| =1 | Bakerloo | 1523.88 | 100% | Good Service |
+| =1 | Central | 1523.88 | 100% | Good Service |
+| =1 | Circle | 1523.88 | 100% | Good Service |
+| =1 | Hammersmith & City | 1523.88 | 100% | Good Service |
+| =1 | Jubilee | 1523.88 | 100% | Good Service |
+| =1 | Metropolitan | 1523.88 | 100% | Good Service |
+| =1 | Northern | 1523.88 | 100% | Good Service |
+| =1 | Victoria | 1523.88 | 100% | Good Service |
+| =1 | Waterloo & City | 1523.88 | 100% | Good Service |
+| 10 | Piccadilly | 1498.82 | 0% | Part Closure |
+| 11 | District | 1489.39 | 0% | Part Suspended |
 
-| Script | Granularity | Use |
-|--------|-------------|-----|
-| `tfl_line_elo.py` | Line-level status | Lightweight; one snapshot ≈ all lines |
-| `tfl_train_event_elo.py` | Per-train stop-call events | Higher fidelity; continuous polling |
+Two polls prove the complete path and show the live network state; they do not constitute
+a long-term punctuality study. Leave the collector running to build a meaningful local
+history, then rerun the same ranking command.
 
-A third module, `tfl_fare_data.py`, encodes the full 2025/26 TfL fare ruleset
-(peak/off-peak, zone caps, Railcard discounts) — used to reason about cost alongside
-reliability.
+## Signal path
 
-## Quick start
-
-```bash
-pip install -r requirements.txt
-
-# Collect one snapshot of every line
-python tfl_line_elo.py collect --iterations 1
-
-# Compute the reliability leaderboard over the last 24h
-python tfl_line_elo.py rank --lookback-hours 24
-
-# Or run a continuous collector (one snapshot per minute, forever)
-python tfl_line_elo.py collect --interval 60 --iterations 0
+```mermaid
+flowchart LR
+    API["TfL Unified API"] --> COLLECT["Status and arrival collectors"]
+    COLLECT --> DB[("Indexed SQLite history")]
+    DB --> LINE["Line-status Elo model"]
+    DB --> EVENT["Stop-call event model"]
+    LINE --> CSV["Reproducible CSV ranking"]
+    EVENT --> CSV
+    EVENT --> UI["Streamlit investigation dashboard"]
 ```
 
-Per-train event tracking + live dashboard:
+The two scoring paths answer different questions:
 
-```bash
-python tfl_train_event_elo.py monitor --line-ids victoria,central,northern --interval 60 --iterations 0
+| Path | Observation | Best for |
+|---|---|---|
+| `tfl_line_elo.py` | One status for each line per poll | A fast network-wide readout |
+| `tfl_train_event_elo.py` | Predictions sampled at individual stops | Arrival, lateness, and cancellation evidence |
+
+Line-status Elo uses TfL severity as the outcome, rewards sustained Good Service, and
+penalises adverse transitions and cancellation mentions. The train-event model resolves
+successive stop predictions, gives peak-hour failures more weight, and applies slower
+movement near the score boundaries. Both models rebuild rankings from stored evidence.
+
+## Run it
+
+Python 3.9 or newer is required because the train-event path uses `zoneinfo`.
+
+```powershell
+git clone https://github.com/LolStar123/tfl-reliability.git
+cd tfl-reliability
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+
+# Capture two line-status snapshots, then rank the last 24 hours.
+python tfl_line_elo.py collect --iterations 2 --interval 60
+python tfl_line_elo.py rank --lookback-hours 24
+```
+
+The public TfL endpoints work without credentials. For higher API limits, set
+`TFL_APP_ID` and `TFL_APP_KEY` in the environment; both CLIs also accept `--app-id` and
+`--app-key` before the subcommand.
+
+For the train-event view, keep the monitor running in one terminal:
+
+```powershell
+python tfl_train_event_elo.py monitor --max-stops-per-line 4 --interval 60 --iterations 0
+```
+
+Then open the dashboard from a second terminal:
+
+```powershell
 python -m streamlit run tfl_train_event_dashboard.py
 ```
 
-Optional TfL API credentials (higher rate limits):
+![Dark TfL reliability dashboard showing the live train-event Elo table](assets/dashboard.png)
 
-```bash
-set TFL_APP_ID=your_app_id
-set TFL_APP_KEY=your_app_key
-```
+The screenshot uses a three-cycle live sample from 19 rotating stops on 30 July 2026. It
+demonstrates the interface and collector, not a claim about whole-network performance.
 
-## Sample output
+## Repository map
 
-```
-line_id        line_name         elo      good_ratio  latest_status
-victoria       Victoria          1523.88  1.00        Good Service
-piccadilly     Piccadilly        1517.69  0.00        Minor Delays
-metropolitan   Metropolitan      1498.82  0.00        Part Closure
-northern       Northern          1489.39  0.00        Part Suspended
-circle         Circle            1487.81  0.00        Severe Delays
-```
+| File | Responsibility |
+|---|---|
+| `tfl_line_elo.py` | Line-status ingestion, SQLite schema, ranking CLI |
+| `tfl_train_event_elo.py` | Stop sampling, event reconciliation, train-event scoring |
+| `tfl_train_event_dashboard.py` | Live status overlay, tables, event feed, charts |
+| `tfl_fare_data.py` | Separate 2025/26 fare and capping reference module |
+| `*_leaderboard.csv` | Captured model outputs for inspection |
 
-Full leaderboard is written to `tfl_line_elo_leaderboard.csv` on each `rank`.
+Generated `*.db` files stay local and are ignored by Git. To contribute, keep ingestion,
+event resolution, and scoring changes separate where possible; run
+`python -m compileall -q .` and exercise the relevant CLI before opening a pull request.
 
-## Design notes
-
-- **Event-driven, not poll-driven scoring.** Elo updates fire on *transitions* between
-  snapshots, so a line sitting in "Minor Delays" for an hour isn't penalised sixty times.
-- **Reproducible.** Ratings are derived from the snapshot table, so changing the model
-  (K-factor, priors) and re-running `rank` recomputes the whole history — no lossy state.
-- **Honest about what it measures.** This is an Elo-style *reliability* signal from public
-  status feeds, not official TfL punctuality statistics.
-
-## Stack
-
-Python 3 · SQLite · TfL Unified API · pandas / numpy · Streamlit · matplotlib
-
-## Layout
-
-```
-tfl_line_elo.py              line-level collector + Elo ranking CLI
-tfl_train_event_elo.py       per-train event collector + monitor + ranking CLI
-tfl_train_event_dashboard.py Streamlit dashboard
-tfl_fare_data.py             2025/26 TfL fare ruleset (zones, caps, Railcards)
-*_leaderboard.csv            sample ranking output
-```
-
-> Databases (`*.db`) are generated locally on first run and are gitignored.
+This project is available under the [MIT License](LICENSE). TfL data remains subject to
+Transport for London's own terms.

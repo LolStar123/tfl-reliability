@@ -1580,17 +1580,193 @@ def main() -> None:
     import importlib
 
     st = importlib.import_module("streamlit")
-    logo_bg = "#070b12"
-    logo_blue = "#1015a8"
 
-    st.set_page_config(page_title="TfL Train Event Elo", layout="wide", initial_sidebar_state="collapsed")
+    st.set_page_config(
+        page_title="TfL Reliability",
+        layout="wide",
+        initial_sidebar_state="collapsed",
+    )
     st.markdown(
         """
         <style>
+          :root {
+            color-scheme: dark;
+            --signal-black: #07090d;
+            --signal-panel: #0d1117;
+            --signal-rule: #252b34;
+            --signal-amber: #e9a23b;
+            --signal-paper: #f4f0e6;
+            --signal-muted: #98a2ad;
+          }
+          html,
+          body,
           .stApp,
           [data-testid="stAppViewContainer"] {
-            background: #070b12 !important;
-            color: #e5e7eb !important;
+            background: var(--signal-black) !important;
+            color: var(--signal-paper) !important;
+          }
+          [data-testid="stHeader"] {
+            background: var(--signal-black) !important;
+          }
+          .block-container {
+            max-width: 1360px;
+            padding-top: 4.5rem;
+            padding-bottom: 3rem;
+          }
+          html,
+          body,
+          [class*="st-"],
+          [class*="css"] {
+            font-family: "Segoe UI Variable Text", "Segoe UI", Arial, sans-serif;
+          }
+          h1, h2, h3 {
+            color: var(--signal-paper) !important;
+            font-weight: 560 !important;
+            letter-spacing: -0.025em !important;
+          }
+          h3 {
+            margin-top: 1.8rem !important;
+          }
+          .signal-lockup {
+            min-height: 78px;
+            display: flex;
+            align-items: center;
+            gap: 18px;
+          }
+          .signal-mark {
+            width: 76px;
+            height: 42px;
+            position: relative;
+            border: 1px solid var(--signal-rule);
+            background:
+              linear-gradient(90deg, transparent 0 11px, var(--signal-rule) 11px 12px, transparent 12px),
+              var(--signal-panel);
+          }
+          .signal-mark::before,
+          .signal-mark::after,
+          .signal-mark span {
+            content: "";
+            position: absolute;
+            left: 12px;
+            height: 2px;
+            background: var(--signal-amber);
+          }
+          .signal-mark::before {
+            top: 12px;
+            width: 46px;
+          }
+          .signal-mark span {
+            top: 20px;
+            width: 35px;
+          }
+          .signal-mark::after {
+            top: 28px;
+            width: 23px;
+          }
+          .signal-kicker {
+            margin-bottom: 5px;
+            color: var(--signal-amber);
+            font-family: "Cascadia Mono", Consolas, monospace;
+            font-size: 0.66rem;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+          }
+          .signal-title {
+            color: var(--signal-paper);
+            font-size: clamp(1.4rem, 2.4vw, 2rem);
+            font-weight: 590;
+            letter-spacing: -0.035em;
+            line-height: 1;
+          }
+          .signal-state {
+            margin-left: auto;
+            padding: 6px 9px;
+            border: 1px solid var(--signal-rule);
+            color: var(--signal-muted);
+            font-family: "Cascadia Mono", Consolas, monospace;
+            font-size: 0.64rem;
+            letter-spacing: 0.12em;
+          }
+          .signal-state i {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            margin-right: 7px;
+            border-radius: 50%;
+            background: var(--signal-amber);
+            box-shadow: 0 0 12px rgba(233, 162, 59, 0.48);
+          }
+          [data-testid="stHorizontalBlock"]:first-of-type {
+            padding-bottom: 1.15rem;
+            border-bottom: 1px solid var(--signal-rule);
+          }
+          [data-baseweb="button-group"] {
+            display: flex;
+            flex-wrap: nowrap;
+            justify-content: flex-end;
+            padding-top: 18px;
+          }
+          [data-baseweb="button-group"] button {
+            min-height: 34px;
+            border-color: var(--signal-rule) !important;
+            border-radius: 0 !important;
+            background: var(--signal-panel) !important;
+            color: var(--signal-muted) !important;
+            font-family: "Cascadia Mono", Consolas, monospace !important;
+            font-size: 0.68rem !important;
+            letter-spacing: 0.035em;
+            white-space: nowrap;
+          }
+          [data-baseweb="button-group"] button p {
+            color: inherit !important;
+            font-family: inherit !important;
+            font-size: inherit !important;
+            white-space: nowrap;
+          }
+          [data-baseweb="button-group"] [data-testid="stBaseButton-segmented_controlActive"] {
+            border-color: var(--signal-amber) !important;
+            color: var(--signal-amber) !important;
+          }
+          table {
+            border-collapse: collapse !important;
+            border: 1px solid var(--signal-rule) !important;
+            background: var(--signal-panel);
+          }
+          th {
+            padding: 13px 9px !important;
+            border-bottom: 1px solid var(--signal-rule) !important;
+            color: var(--signal-muted) !important;
+            font-family: "Cascadia Mono", Consolas, monospace !important;
+            font-size: 0.66rem !important;
+            font-weight: 600 !important;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+          }
+          td {
+            padding: 10px 9px !important;
+            border-bottom: 1px solid rgba(37, 43, 52, 0.75) !important;
+            color: var(--signal-paper);
+            font-family: "Cascadia Mono", Consolas, monospace;
+            font-variant-numeric: tabular-nums;
+          }
+          tr:last-child td {
+            border-bottom: 0 !important;
+          }
+          .stCaptionContainer,
+          [data-testid="stMarkdownContainer"] small {
+            color: var(--signal-muted) !important;
+          }
+          @media (max-width: 800px) {
+            .block-container {
+              padding-top: 4rem;
+            }
+            .signal-state {
+              display: none;
+            }
+            [data-baseweb="button-group"] {
+              justify-content: flex-start;
+              overflow-x: auto;
+            }
           }
           [data-testid="stToolbar"],
           [data-testid="stHeaderActionElements"],
@@ -1613,25 +1789,21 @@ def main() -> None:
     if "last_page_switch_ts" not in st.session_state:
         st.session_state["last_page_switch_ts"] = 0.0
 
-    top_left, top_right = st.columns([1.8, 1.2])
+    top_left, top_right = st.columns([1.25, 1.75])
     with top_left:
-        logo_col, text_col = st.columns([1.0, 2.3])
-        with logo_col:
-            st.markdown(
-                f"""
-                <div style="width:220px; max-width:100%; background:{logo_bg}; padding:4px 0;">
-                  <svg viewBox="0 0 820 420" width="100%" role="img" aria-label="TfL Elo logo">
-                    <rect x="0" y="0" width="820" height="420" fill="{logo_bg}"/>
-                    <ellipse cx="410" cy="210" rx="305" ry="155" fill="none" stroke="{logo_blue}" stroke-width="72"/>
-                    <rect x="0" y="175" width="820" height="70" fill="{logo_blue}"/>
-                    <text x="410" y="223" text-anchor="middle" fill="#ffffff" font-size="44" font-family="Arial, sans-serif" font-weight="700">TFL ELO</text>
-                  </svg>
+        st.markdown(
+            """
+                <div class="signal-lockup">
+                  <div class="signal-mark" aria-hidden="true"><span></span></div>
+                  <div>
+                    <div class="signal-kicker">LIVE NETWORK / TRAIN EVENT MODEL</div>
+                    <div class="signal-title">TfL reliability</div>
+                  </div>
+                  <div class="signal-state"><i></i>INGEST ACTIVE</div>
                 </div>
-                """,
-                unsafe_allow_html=True,
-            )
-        with text_col:
-            st.subheader("TfL Train ELO Dashboard")
+            """,
+            unsafe_allow_html=True,
+        )
     with top_right:
         selected = st.segmented_control(
             label="Views",
