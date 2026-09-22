@@ -23,8 +23,11 @@ try:
   page.locator('#window').select_option('168')
   with page.expect_download() as dl:page.locator('#download').click()
   assert dl.value.suggested_filename.endswith('.csv')
+  page.set_viewport_size({'width':1280,'height':720})
+  assert page.locator('.line').last.bounding_box()['y']+page.locator('.line').last.bounding_box()['height']<720,'all lines must fit landing viewport'
   page.screenshot(path=str(ROOT/'examples/portfolio/preview.png'))
   page.set_viewport_size({'width':390,'height':844});assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1')
+  assert page.locator('.line').last.bounding_box()['y']+page.locator('.line').last.bounding_box()['height']<844,'all lines must fit phone landing viewport'
   page.route('https://api.tfl.gov.uk/**',lambda r:r.abort())
   page.locator('#refresh').click();page.wait_for_function('!document.querySelector("#refresh").disabled')
   assert page.locator('.line').count()==11
