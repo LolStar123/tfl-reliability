@@ -2,7 +2,7 @@
 
 **[Open the live leaderboard](https://lolstar123.github.io/tfl-reliability/)**
 
-All eleven Underground lines, ranked first. Coloured line badges, podium positions, arrival
+All eleven Underground lines on the landing time-series chart, with the ranked table directly below. Coloured line badges, podium positions, arrival
 counts, line history and five-minute candles restore the original hackathon dashboard.
 
 ![Live train-event leaderboard](examples/portfolio/preview.png)

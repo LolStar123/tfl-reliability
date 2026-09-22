@@ -17,12 +17,14 @@ try:
   page.wait_for_function('window.__tfl?.ready')
   page.wait_for_function('!document.querySelector("#refresh").disabled')
   assert page.locator('.line').count()==11
+  assert page.locator('#history-chart polyline').count()==11
   assert page.evaluate('__tfl.rows.every(r=>r.elo>=100&&r.elo<=3500)')
   page.locator('#dataset').select_option('archive')
   page.locator('[data-view="history"]').click()
   assert page.locator('#history-chart polyline').count()==11
   page.locator('#line-toggles input').first.uncheck()
   assert page.locator('#history-chart polyline').count()==10
+  page.locator('#line-toggles input').first.check()
   page.locator('[data-view="candles"]').click()
   assert page.locator('#candle-chart rect').count()>1
   page.locator('#candle-line').select_option('victoria')
@@ -31,10 +33,12 @@ try:
   with page.expect_download() as dl:page.locator('#download').click()
   assert dl.value.suggested_filename.endswith('.csv')
   page.set_viewport_size({'width':1280,'height':720})
-  assert page.locator('.line').last.bounding_box()['y']+page.locator('.line').last.bounding_box()['height']<720,'all lines must fit landing viewport'
+  page.locator('[data-view="history"]').click()
+  assert page.locator('#history').is_visible()
+  assert page.locator('#history-chart').bounding_box()['y']<450,'history chart must be the landing view'
   page.screenshot(path=str(ROOT/'examples/portfolio/preview.png'))
   page.set_viewport_size({'width':390,'height':844});assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1')
-  assert page.locator('.line').last.bounding_box()['y']+page.locator('.line').last.bounding_box()['height']<844,'all lines must fit phone landing viewport'
+  assert page.locator('#history-chart').bounding_box()['y']<650,'history chart must lead on mobile'
   page.route('https://api.tfl.gov.uk/**',lambda r:r.abort())
   page.locator('#refresh').click();page.wait_for_function('!document.querySelector("#refresh").disabled')
   assert page.locator('.line').count()==11
