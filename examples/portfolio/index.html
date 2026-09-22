@@ -1,54 +1,8 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>working example</title>
-    <link rel="stylesheet" href="style.css" />
-  </head>
-  <body>
-    <main>
-      <nav>
-        <a href="https://atul-kanodia-fieldnotes.atulswaggalicious.chatgpt.site"
-          >atul's corner</a
-        ><a id="source" href="#">github / source</a>
-      </nav>
-      <header>
-        <p class="eyebrow">a small working example</p>
-        <h1 id="title"></h1>
-        <p id="description"></p>
-      </header>
-      <section aria-label="inputs">
-        <h2>try it</h2>
-        <div id="controls"></div>
-        <details>
-          <summary>edit the example input</summary>
-          <label for="fixture">JSON input</label
-          ><textarea id="fixture" spellcheck="false" rows="14"></textarea
-          ><button id="apply">run this input</button>
-        </details>
-        <p id="error" role="alert"></p>
-      </section>
-      <section aria-label="result">
-        <h2 id="summary" aria-live="polite"></h2>
-        <dl id="metrics"></dl>
-        <div id="chart"></div>
-        <div class="table-wrap"><table id="table"></table></div>
-        <pre id="catalogue" hidden></pre>
-        <div class="actions">
-          <button id="json">download result / json</button
-          ><button id="csv">download table / csv</button
-          ><button id="reset">reset example</button>
-        </div>
-      </section>
-      <section class="explanation">
-        <h2>the workflow</h2>
-        <p id="workflow"></p>
-        <ol id="steps"></ol>
-        <p class="scope" id="scope"></p>
-      </section>
-      <footer>built by atul kanodia · ucl economics</footer>
-    </main>
-    <script type="module" src="app.mjs"></script>
-  </body>
-</html>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>tube reliability / live network</title><link rel="stylesheet" href="style.css"></head><body>
+<header><a class="wordmark" href="https://github.com/LolStar123/tfl-reliability">tfl / reliability</a><nav><a href="https://atul-kanodia-fieldnotes.atulswaggalicious.chatgpt.site">atul's projects</a><a href="https://github.com/LolStar123/tfl-reliability">source</a></nav></header>
+<main><div class="intro"><div><p class="eyebrow">london underground · observed service history</p><h1>the tube,<br>ranked.</h1></div><div class="live-note"><span id="connection">loading the network</span><p id="updated">Reading the collected history…</p><button id="refresh">refresh live service</button></div></div>
+<p id="notice" role="status"></p><div class="toolbar"><label>rating window <select id="window"><option value="24">last 24 hours</option><option value="168">last 7 days</option><option value="720">last 30 days</option></select></label><span id="coverage"></span><button id="download">download ratings</button></div>
+<div class="network"><section class="board" aria-label="Tube reliability leaderboard"><div class="board-heading"><span>line / select for details</span><span>elo</span><span>service now</span></div><div id="lines" aria-live="polite"></div></section>
+<aside id="detail"><p class="eyebrow">line detail</p><h2 id="line-title">collecting the view</h2><p id="line-reason"></p><div id="rating-chart"></div><dl id="line-stats"></dl><h3>next arrivals</h3><p class="small" id="arrivals-note">Choose a line to see TfL's current predictions.</p><label class="station-label">station <select id="station"><option>loading stations</option></select></label><div id="arrivals"></div></aside></div>
+<details class="method"><summary>where these ratings come from</summary><p>The collector records TfL's actual line-status feed every 15 minutes and keeps 30 days of observations. Elo starts at 1500. Good service increases it; disruptions and cancellation reports reduce it. The rating uses the project's Python scoring model, with service-closed periods excluded. It measures observed service quality, not official punctuality or your journey time.</p><p>Opening this page requests current TfL service information and recalculates the same model with that observation. Repeated refreshes replace the current quarter-hour observation rather than adding votes. The collected history keeps growing independently of your browser. GitHub's scheduled jobs can run late; the timestamps above show the data you actually have.</p><a href="data/network.json">download collected observations</a> · <a href="https://github.com/LolStar123/tfl-reliability/blob/main/tools/collect_public.py">collector source</a></details>
+</main><footer>Transport data: <a href="https://tfl.gov.uk/info-for/open-data-users/">TfL Unified API</a>. Independent project by Atul Kanodia. <a href="https://tfl.gov.uk/corporate/terms-and-conditions/transport-data-service">Data terms</a>.</footer><script type="module" src="app.mjs"></script></body></html>

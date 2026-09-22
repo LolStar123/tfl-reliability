@@ -1,13 +1,15 @@
-<!-- working-example:start -->
-## Try it in a minute
+# the tube, ranked
 
-**[Live example](https://lolstar123.github.io/tfl-reliability/)** · [Example code](examples/portfolio/model.mjs) · [Run locally](examples/portfolio/README.md) · [Atul's website](https://atul-kanodia-fieldnotes.atulswaggalicious.chatgpt.site)
+**[Open the live network](https://lolstar123.github.io/tfl-reliability/)** ? [Collector](tools/collect_public.py) ? [Frontend](examples/portfolio/app.mjs)
 
-Replay line-status events and introduce a disruption to see the ratings change.
+All eleven lines, current TfL service messages, observed-history Elo and live station arrivals.
+Opening the page requests current service; the cloud collector retains observations every
+15 minutes so the ratings keep building when nobody has the page open. The page displays
+collection start, observation counts and freshness. Missing data stays missing.
 
-<img src="examples/portfolio/preview.png" alt="tube reliability example inputs and calculated output" width="760">
+<img src="examples/portfolio/preview.png" alt="Live Tube reliability leaderboard and line detail" width="900">
 
-<!-- working-example:end -->
+
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/banner-dark.svg">
@@ -26,29 +28,20 @@ late trains, and cancellations without scoring the same disruption on every poll
 repository includes both a lightweight line-status model and a stop-call event model,
 plus a Streamlit dashboard for inspecting the signal.
 
-## Current readout
+## The published data
 
-This is a real run of `tfl_line_elo.py`, captured at **14:50 UTC on 30 July 2026** from two
-credential-free TfL API polls. The CSV is committed as
-[`tfl_line_elo_leaderboard.csv`](tfl_line_elo_leaderboard.csv).
+The public feed starts with real observations collected on 22 September 2026. Its history
+is deliberately labelled short during warm-up. Current service comes directly from TfL;
+ratings use the stored observations and the same scoring function as the Python collector.
 
-| Position | Line | Elo | Good service | Latest status |
-|---:|---|---:|---:|---|
-| =1 | Bakerloo | 1523.88 | 100% | Good Service |
-| =1 | Central | 1523.88 | 100% | Good Service |
-| =1 | Circle | 1523.88 | 100% | Good Service |
-| =1 | Hammersmith & City | 1523.88 | 100% | Good Service |
-| =1 | Jubilee | 1523.88 | 100% | Good Service |
-| =1 | Metropolitan | 1523.88 | 100% | Good Service |
-| =1 | Northern | 1523.88 | 100% | Good Service |
-| =1 | Victoria | 1523.88 | 100% | Good Service |
-| =1 | Waterloo & City | 1523.88 | 100% | Good Service |
-| 10 | Piccadilly | 1498.82 | 0% | Part Closure |
-| 11 | District | 1489.39 | 0% | Part Suspended |
+- [Collected feed](https://lolstar123.github.io/tfl-reliability/data/network.json)
+- [Durable observation history](https://github.com/LolStar123/tfl-reliability/tree/observations)
+- [Collection and deployment runs](https://github.com/LolStar123/tfl-reliability/actions/workflows/example-pages.yml)
 
-Two polls prove the complete path and show the live network state; they do not constitute
-a long-term punctuality study. Leave the collector running to build a meaningful local
-history, then rerun the same ranking command.
+Scheduled Actions can be delayed. The page keeps the last successful observation visible
+with its timestamp when a request fails. It never substitutes generated service events.
+Repeated refreshes replace the current quarter-hour record, avoiding duplicate score updates.
+Service-closed periods do not count as running-service failures.
 
 ## Signal path
 

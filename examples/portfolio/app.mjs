@@ -1,224 +1,27 @@
-import { defaults, controls, run } from "./model.mjs";
-const meta = await (await fetch("./project.json")).json();
-const catalogue = await fetch("./catalogue.json")
-  .then((r) => (r.ok ? r.json() : null))
-  .catch(() => null);
-if (catalogue) defaults.catalogue = catalogue;
-const $ = (s) => document.querySelector(s),
-  input = structuredClone(defaults);
-document.title = meta.title + " | working example";
-$("#title").textContent = meta.title;
-$("#description").textContent = meta.caption;
-$("#scope").textContent = meta.boundary;
-$("#source").href = `https://github.com/LolStar123/${meta.repo}`;
-$("#workflow").textContent = meta.workflow;
-const esc = (s) =>
-  String(s ?? "").replace(
-    /[&<>"']/g,
-    (c) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
-        c
-      ],
-  );
-for (const spec of controls) {
-  const label = document.createElement("label");
-  label.textContent = spec.label;
-  const el = document.createElement(
-    spec.type === "select" ? "select" : "input",
-  );
-  el.id = spec.key;
-  if (spec.type === "select")
-    for (const v of spec.options) {
-      const o = new Option(v, v);
-      el.add(o);
-    }
-  else el.type = spec.type;
-  for (const k of ["min", "max", "step"])
-    if (spec[k] !== undefined) el[k] = spec[k];
-  if (spec.type === "checkbox") el.checked = input[spec.key];
-  else el.value = input[spec.key];
-  el.addEventListener("input", () => {
-    input[spec.key] =
-      spec.type === "checkbox"
-        ? el.checked
-        : spec.type === "number"
-          ? Number(el.value)
-          : el.value;
-    $("#fixture").value = JSON.stringify(input, null, 2);
-    render();
-  });
-  label.append(el);
-  $("#controls").append(label);
+import {colours,flatten,mergeLive,leaderboard} from './live.mjs';
+const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const stamp=s=>new Date(s).toLocaleString('en-GB',{timeZone:'Europe/London',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZoneName:'short'});
+let feed,rows=[],selected=null,arrivals=[],requestId=0,liveAt=null;
+async function get(url){const r=await fetch(url,{signal:AbortSignal.timeout(16000),cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);return r.json();}
+function render(){rows=leaderboard(feed,Number($('#window').value));selected=selected||rows.at(-1)?.id;
+ const count=feed.snapshots.length,age=(Date.now()-Date.parse(feed.updated))/60000;
+ $('#coverage').textContent=`${count} network observations · collection began ${stamp(feed.started)}`;
+ $('#updated').textContent=`${liveAt?'Live service checked':'Last collected observation'} ${stamp(feed.updated)}`;
+ $('#notice').textContent=count<8?'The collector has just started. These are real observations, but the history is still short; ratings will become more informative as it accumulates.':age>45?'The collected feed is over 45 minutes old. Its timestamp is shown; no observations have been invented.':'';
+ $('#lines').innerHTML=rows.map((r,n)=>`<button class="line" data-id="${r.id}" style="--line:${colours[r.id]}" aria-pressed="${selected===r.id}"><span class="line-name">${esc(r.name)}<small>${r.observations} observations · ${r.good===null?'no running-service samples':Math.round(r.good*100)+'% good service'}</small></span><span class="elo">${r.elo.toFixed(1)}</span><span class="state ${r.severity<10?'bad':''}">${esc(r.status)}</span></button>`).join('');
+ for(const button of $('#lines').querySelectorAll('button'))button.onclick=()=>select(button.dataset.id);
+ detail();window.__tfl={ready:true,feed,rows,liveAt,selected};
 }
-$("#fixture").value = JSON.stringify(input, null, 2);
-let result = null;
-function plot(r) {
-  const ns = "http://www.w3.org/2000/svg",
-    svg = document.createElementNS(ns, "svg");
-  svg.setAttribute("viewBox", "0 0 720 220");
-  svg.setAttribute("role", "img");
-  const title = document.createElementNS(ns, "title");
-  title.textContent = r.seriesLabel || "Traversable route around blocked cells";
-  svg.append(title);
-  const draw = (tag, attrs) => {
-    const e = document.createElementNS(ns, tag);
-    for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
-    svg.append(e);
-    return e;
-  };
-  if (r.grid) {
-    const g = r.grid,
-      s = Math.min(680 / g.width, 195 / g.height),
-      ox = 20,
-      oy = 12;
-    for (const [x, y] of g.blocked)
-      draw("rect", {
-        x: ox + x * s,
-        y: oy + y * s,
-        width: s,
-        height: s,
-        fill: "#a7a18e",
-      });
-    if (g.path.length)
-      draw("polyline", {
-        points: g.path
-          .map(([x, y]) => `${ox + (x + 0.5) * s},${oy + (y + 0.5) * s}`)
-          .join(" "),
-        fill: "none",
-        stroke: "#536c50",
-        "stroke-width": 3,
-      });
-    for (const [p, color] of [
-      [g.start, "#536c50"],
-      [g.goal, "#a34d32"],
-    ])
-      draw("circle", {
-        cx: ox + (p[0] + 0.5) * s,
-        cy: oy + (p[1] + 0.5) * s,
-        r: s * 0.38,
-        fill: color,
-      });
-  } else {
-    const vals = r.series,
-      lo = Math.min(...vals),
-      hi = Math.max(...vals),
-      span = hi - lo || 1;
-    draw("path", { d: "M48 12 V186 H700", stroke: "#aaa38e", fill: "none" });
-    draw("polyline", {
-      points: vals
-        .map(
-          (v, n) =>
-            `${48 + (n / (vals.length - 1 || 1)) * 652},${178 - ((v - lo) / span) * 150}`,
-        )
-        .join(" "),
-      fill: "none",
-      stroke: "#536c50",
-      "stroke-width": 2,
-    });
-    for (const [y, v] of [
-      [26, hi],
-      [181, lo],
-    ])
-      draw("text", {
-        x: 44,
-        y,
-        "text-anchor": "end",
-        "font-size": 11,
-        fill: "#5c584e",
-      }).textContent = v.toFixed(2);
-    draw("text", {
-      x: 48,
-      y: 210,
-      "font-size": 12,
-      fill: "#5c584e",
-    }).textContent = r.seriesLabel;
-  }
-  return svg;
+function detail(){const r=rows.find(r=>r.id===selected);if(!r)return;$('#detail').style.setProperty('--line',colours[r.id]);$('#line-title').textContent=r.name;$('#line-reason').textContent=r.reason||r.status;$('#line-stats').innerHTML=`<div><dt>reliability elo</dt><dd>${r.elo.toFixed(1)}</dd></div><div><dt>observations</dt><dd>${r.observations}</dd></div><div><dt>good service</dt><dd>${r.good===null?'—':(r.good*100).toFixed(0)+'%'}</dd></div>`;
+ const h=r.history;if(h.length<2){$('#rating-chart').textContent='Rating history will appear after the next collected observation.';return;}
+ const vals=[1500,...h.map(p=>p.elo)],min=Math.min(...vals)-2,max=Math.max(...vals)+2,points=vals.map((v,i)=>`${10+i/(vals.length-1)*360},${118-(v-min)/(max-min)*95}`).join(' ');
+ $('#rating-chart').innerHTML=`<svg viewBox="0 0 380 140" role="img" aria-label="${esc(r.name)} rating over collected observations"><line x1="10" x2="370" y1="120" y2="120" stroke="#c9d3da"/><polyline points="${points}" fill="none" stroke="${colours[r.id]}" stroke-width="3"/><text x="10" y="137" font-size="10" fill="#4c6475">${stamp(h[0].at)}</text><text x="370" y="137" text-anchor="end" font-size="10" fill="#4c6475">${stamp(h.at(-1).at)}</text></svg>`;
 }
-function render() {
-  try {
-    result = run(input);
-    $("#error").textContent = "";
-    $("#summary").textContent = result.summary;
-    $("#metrics").innerHTML = Object.entries(result.metrics)
-      .map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`)
-      .join("");
-    $("#table").innerHTML =
-      "<thead><tr>" +
-      result.columns
-        .map((c) => '<th scope="col">' + esc(c) + "</th>")
-        .join("") +
-      "</tr></thead><tbody>" +
-      result.rows
-        .map(
-          (row) =>
-            "<tr>" +
-            row.map((v) => "<td>" + esc(v) + "</td>").join("") +
-            "</tr>",
-        )
-        .join("") +
-      "</tbody>";
-    $("#steps").innerHTML = result.steps
-      .map((s) => "<li>" + esc(s) + "</li>")
-      .join("");
-    $("#chart").replaceChildren();
-    if (result.series?.length || result.grid) $("#chart").append(plot(result));
-    $("#catalogue").textContent = result.extra
-      ? JSON.stringify(result.extra, null, 2)
-      : "";
-    $("#catalogue").hidden = !result.extra;
-    window.__example = { input: structuredClone(input), result, ready: true };
-  } catch (e) {
-    result = null;
-    $("#error").textContent = e.message;
-    window.__example = { ready: false, error: e.message };
-  }
-}
-$("#apply").onclick = () => {
-  try {
-    const parsed = JSON.parse($("#fixture").value);
-    for (const key of Object.keys(input)) delete input[key];
-    Object.assign(input, parsed);
-    for (const s of controls) {
-      if (s.type === "checkbox") $("#" + s.key).checked = !!input[s.key];
-      else $("#" + s.key).value = input[s.key];
-    }
-    render();
-  } catch (e) {
-    $("#error").textContent = e.message;
-  }
-};
-$("#reset").onclick = () => {
-  location.reload();
-};
-function download(name, text, type) {
-  const u = URL.createObjectURL(new Blob([text], { type })),
-    a = document.createElement("a");
-  a.href = u;
-  a.download = name;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(u), 1000);
-}
-$("#json").onclick = () => {
-  if (result)
-    download(
-      meta.repo + "-result.json",
-      JSON.stringify(result.artifact, null, 2),
-      "application/json",
-    );
-};
-$("#csv").onclick = () => {
-  if (result)
-    download(
-      meta.repo + "-result.csv",
-      [result.columns, ...result.rows]
-        .map((row) =>
-          row
-            .map((v) => '"' + String(v ?? "").replace(/"/g, '""') + '"')
-            .join(","),
-        )
-        .join("\r\n"),
-      "text/csv",
-    );
-};
-render();
+async function select(id){selected=id;render();const request=++requestId;$('#arrivals-note').textContent='Getting live arrival predictions…';$('#arrivals').replaceChildren();try{const data=await get(`https://api.tfl.gov.uk/Line/${encodeURIComponent(id)}/Arrivals`);if(request!==requestId)return;if(!Array.isArray(data))throw Error('Unexpected arrival response');arrivals=data;const stations=[...new Set(data.map(r=>r.stationName))].sort();$('#station').innerHTML=stations.map(s=>`<option>${esc(s)}</option>`).join('');$('#arrivals-note').textContent=`TfL predictions checked ${new Date().toLocaleTimeString('en-GB')}. Select a station.`;renderArrivals();}catch(e){if(request!==requestId)return;$('#station').innerHTML='<option>unavailable</option>';$('#arrivals-note').textContent='Live arrivals are unavailable right now. The observed line rating remains above.';}}
+function renderArrivals(){const subset=arrivals.filter(a=>a.stationName===$('#station').value).sort((a,b)=>Date.parse(a.expectedArrival)-Date.parse(b.expectedArrival)).slice(0,8);$('#arrivals').innerHTML=subset.length?subset.map(a=>`<div class="arrival"><span>${esc(a.destinationName||a.towards||'destination pending')}<br><small>${esc(a.platformName||'')}</small></span><strong>${Math.max(0,Math.ceil((Date.parse(a.expectedArrival)-Date.now())/60000))} min</strong></div>`).join(''):'<p class="small">No predicted trains at this station.</p>';}
+async function refresh(){const button=$('#refresh');button.disabled=true;$('#connection').textContent='checking TfL';try{const lines=flatten(await get('https://api.tfl.gov.uk/Line/Mode/tube/Status'));liveAt=new Date().toISOString();feed=mergeLive(feed||{snapshots:[],started:liveAt},lines,liveAt);$('#connection').textContent='live service connected';render();}catch(e){$('#connection').textContent=feed?'showing collected observations':'TfL unavailable';$('#notice').textContent=feed?'The direct TfL request failed. Showing the last collected observations with their timestamp.':'No live response or saved feed is available. Refresh to try again.';}finally{button.disabled=false;}}
+$('#window').onchange=render;$('#refresh').onclick=refresh;$('#station').onchange=renderArrivals;
+$('#download').onclick=()=>{if(!rows.length)return;const data=[['line','elo','observations','good_service_share','status','observed_at'],...rows.map(r=>[r.name,r.elo,r.observations,r.good,r.status,feed.updated])].map(r=>r.map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(',')).join('\r\n'),url=URL.createObjectURL(new Blob([data],{type:'text/csv'})),a=document.createElement('a');a.href=url;a.download='tube-reliability.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+try{feed=await get('./data/network.json');render();$('#connection').textContent='collected history loaded';}catch{}
+await refresh();if(rows.length)select(selected);
+setInterval(()=>{if(!document.hidden)refresh();},60000);
