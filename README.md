@@ -1,3 +1,14 @@
+<!-- working-example:start -->
+## Try it in a minute
+
+**[Live example](https://lolstar123.github.io/tfl-reliability/)** · [Example code](examples/portfolio/model.mjs) · [Run locally](examples/portfolio/README.md) · [Atul's website](https://atul-kanodia-fieldnotes.atulswaggalicious.chatgpt.site)
+
+Replay line-status events and introduce a disruption to see the ratings change.
+
+<img src="examples/portfolio/preview.png" alt="tube reliability example inputs and calculated output" width="760">
+
+<!-- working-example:end -->
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/banner-dark.svg">
   <source media="(prefers-color-scheme: light)" srcset="assets/banner-light.svg">
