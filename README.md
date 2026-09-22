@@ -23,7 +23,7 @@ unavailable, never replaced by generated observations.
 
 ## Original project and recovered history
 
-Built with Benjamin Toze at QuantiHack 2026. [Devpost](https://devpost.com/software/tfl-elo-tracker)
+Built with Benjamin Toze at QuantiHack 2026, after the five-day qualifying trading competition. [Benjamin's event post](https://www.linkedin.com/feed/update/urn:li:activity:7444669989090902016/) records the collaboration. [Devpost](https://devpost.com/software/tfl-elo-tracker)
 contains the original screenshots and project account.
 [Original team repository](https://github.com/bento-boxing/Quantihack2026project/tree/tfl-live-elo).
 

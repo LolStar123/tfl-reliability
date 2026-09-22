@@ -14,3 +14,5 @@ No user accounts, API keys or private journey records are included.
 The original event gain/loss function is reused. Cubic gravity and 100?3500 limits are new
 safeguards. This update deliberately avoids the original disappearing-prediction cancellation
 heuristic. It does not claim to implement standard zero-sum pairwise Elo.
+
+The event photograph was supplied by Atul from his clipboard for this page. Its rights remain with its owner; the code license does not license the photograph. The project account is sourced to Benjamin Toze's linked LinkedIn post.
