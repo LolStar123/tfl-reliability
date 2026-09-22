@@ -15,3 +15,7 @@ class Events(unittest.TestCase):
   merge_predictions(s,'central',[p],'2026-09-22T10:00:20+00:00');self.assertEqual(s['lines']['central']['on_time'],1)
   merge_predictions(s,'central',[p],'2026-09-22T10:00:25+00:00');self.assertEqual(s['lines']['central']['on_time'],1)
   merge_predictions(s,'central',[],'2026-09-22T11:00:00+00:00');self.assertEqual(s['lines']['central']['cancelled'],0)
+
+
+if __name__ == "__main__":
+    unittest.main()

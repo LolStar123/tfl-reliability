@@ -1,5 +1,80 @@
-import {rate} from './model.mjs';
-export const colours={'bakerloo':'#ad713b','central':'#db3935','circle':'#e8bf30','district':'#32805a','hammersmith-city':'#c98c9a','jubilee':'#879299','metropolitan':'#8e375d','northern':'#303237','piccadilly':'#4168aa','victoria':'#54a3c1','waterloo-city':'#78b6a9'};
-export function flatten(payload){if(!Array.isArray(payload)||payload.length!==11)throw Error('TfL did not return all eleven lines.');return payload.map(l=>{if(!l.lineStatuses?.length)throw Error('TfL returned an incomplete line status.');const active=l.lineStatuses.filter(s=>s.statusSeverity!==20),s=(active.length?active:l.lineStatuses).reduce((a,b)=>a.statusSeverity<b.statusSeverity?a:b);return{id:l.id,name:l.name,severity:s.statusSeverity,status:s.statusSeverityDescription,reason:[...new Set(l.lineStatuses.map(s=>s.reason||''))].join(' ').trim()};});}
-export function mergeLive(feed,lines,at){const bucket=Math.floor(Date.parse(at)/600000);return{...feed,updated:at,snapshots:[...feed.snapshots.filter(s=>Math.floor(Date.parse(s.at)/600000)!==bucket),{at,lines}].sort((a,b)=>Date.parse(a.at)-Date.parse(b.at))};}
-export function leaderboard(feed,hours=24){const cutoff=Date.parse(feed.updated)-hours*3600000,snapshots=feed.snapshots.filter(s=>Date.parse(s.at)>=cutoff),latest=feed.snapshots.at(-1);return latest.lines.map(line=>{const obs=snapshots.flatMap(s=>{const l=s.lines.find(l=>l.id===line.id);return l&&l.severity!==20?[{...l,at:s.at}]:[];}),r=rate(obs.map(l=>({severity:l.severity,reason:l.reason})));return{...line,elo:r.elo,observations:obs.length,good:obs.length?obs.filter(o=>o.severity===10).length/obs.length:null,history:r.history.map((elo,i)=>({at:obs[i].at,elo,status:obs[i].status}))};}).sort((a,b)=>b.elo-a.elo||a.name.localeCompare(b.name));}
+import { rate } from "./model.mjs";
+export const colours = {
+    bakerloo: "#ad713b",
+    central: "#db3935",
+    circle: "#e8bf30",
+    district: "#32805a",
+    "hammersmith-city": "#c98c9a",
+    jubilee: "#879299",
+    metropolitan: "#8e375d",
+    northern: "#303237",
+    piccadilly: "#4168aa",
+    victoria: "#54a3c1",
+    "waterloo-city": "#78b6a9",
+};
+export function flatten(payload) {
+    if (!Array.isArray(payload) || payload.length !== 11)
+        throw Error("TfL did not return all eleven lines.");
+    return payload.map((l) => {
+        if (!l.lineStatuses?.length)
+            throw Error("TfL returned an incomplete line status.");
+        const active = l.lineStatuses.filter((s) => s.statusSeverity !== 20),
+            s = (active.length ? active : l.lineStatuses).reduce((a, b) =>
+                a.statusSeverity < b.statusSeverity ? a : b,
+            );
+        return {
+            id: l.id,
+            name: l.name,
+            severity: s.statusSeverity,
+            status: s.statusSeverityDescription,
+            reason: [...new Set(l.lineStatuses.map((s) => s.reason || ""))]
+                .join(" ")
+                .trim(),
+        };
+    });
+}
+export function mergeLive(feed, lines, at) {
+    const bucket = Math.floor(Date.parse(at) / 600000);
+    return {
+        ...feed,
+        updated: at,
+        snapshots: [
+            ...feed.snapshots.filter(
+                (s) => Math.floor(Date.parse(s.at) / 600000) !== bucket,
+            ),
+            { at, lines },
+        ].sort((a, b) => Date.parse(a.at) - Date.parse(b.at)),
+    };
+}
+export function leaderboard(feed, hours = 24) {
+    const cutoff = Date.parse(feed.updated) - hours * 3600000,
+        snapshots = feed.snapshots.filter((s) => Date.parse(s.at) >= cutoff),
+        latest = feed.snapshots.at(-1);
+    return latest.lines
+        .map((line) => {
+            const obs = snapshots.flatMap((s) => {
+                    const l = s.lines.find((l) => l.id === line.id);
+                    return l && l.severity !== 20 ? [{ ...l, at: s.at }] : [];
+                }),
+                r = rate(
+                    obs.map((l) => ({
+                        severity: l.severity,
+                        reason: l.reason,
+                    })),
+                );
+            return {
+                ...line,
+                elo: r.elo,
+                observations: obs.length,
+                good: obs.length
+                    ? obs.filter((o) => o.severity === 10).length / obs.length
+                    : null,
+                history: r.history.map((elo, i) => ({
+                    at: obs[i].at,
+                    elo,
+                    status: obs[i].status,
+                })),
+            };
+        })
+        .sort((a, b) => b.elo - a.elo || a.name.localeCompare(b.name));
+}

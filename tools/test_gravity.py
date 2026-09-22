@@ -1,6 +1,9 @@
 import json
 import subprocess
 import unittest
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from tfl_line_elo import calculate_elo_for_line
 
 class BandGravity(unittest.TestCase):
@@ -25,3 +28,7 @@ class BandGravity(unittest.TestCase):
     def test_invalid_parameters(self):
         for base, k in [(float('nan'),32),(1500,float('inf')),(0,32),(3500,32),(1500,-1)]:
             with self.assertRaises(ValueError): calculate_elo_for_line([],base,k)
+
+
+if __name__ == "__main__":
+    unittest.main()
