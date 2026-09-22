@@ -24,12 +24,12 @@ def merge(history, payload, now):
                      'reason': ' '.join(dict.fromkeys(s.get('reason', '').strip() for s in states)).strip()})
     timestamp = now.isoformat()
     cutoff = (now - timedelta(days=30)).isoformat()
-    # At most one observation per quarter-hour bucket, including manual dispatches.
-    bucket = int(now.timestamp()) // 900
-    snapshots = [s for s in history.get('snapshots', []) if s['at'] >= cutoff and int(datetime.fromisoformat(s['at']).timestamp()) // 900 != bucket]
+    # At most one observation per ten-minute bucket, including manual dispatches.
+    bucket = int(now.timestamp()) // 600
+    snapshots = [s for s in history.get('snapshots', []) if s['at'] >= cutoff and int(datetime.fromisoformat(s['at']).timestamp()) // 600 != bucket]
     snapshots.append({'at': timestamp, 'lines': rows})
     return {'schema': 1, 'source': 'https://api.tfl.gov.uk/Line/Mode/tube/Status',
-            'started': history.get('started', timestamp), 'updated': timestamp, 'cadence_minutes': 15,
+            'started': history.get('started', timestamp), 'updated': timestamp, 'cadence_minutes': 10,
             'snapshots': sorted(snapshots, key=lambda s: s['at'])}
 
 

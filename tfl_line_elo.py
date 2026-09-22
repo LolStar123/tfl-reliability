@@ -167,6 +167,8 @@ def quality_from_severity(status_severity: Optional[int]) -> float:
 
 
 def calculate_elo_for_line(events: List[dict], base_elo: float, k_factor: float) -> Tuple[float, Dict[str, int], float]:
+    if not 100 < base_elo < 3500 or not 0 < k_factor <= 100:
+        raise ValueError("Base must be inside (100, 3500); K must be in (0, 100].")
     elo = base_elo
     good_streak = 0
     stats = {
@@ -184,7 +186,11 @@ def calculate_elo_for_line(events: List[dict], base_elo: float, k_factor: float)
         quality = quality_from_severity(severity)
 
         expected_quality = 1.0 / (1.0 + pow(10.0, (base_elo - elo) / 400.0))
-        elo += k_factor * (quality - expected_quality)
+        # Cubic restoring force: negligible near baseline, strong at the edges.
+        distance = elo - base_elo
+        span = (3500 - base_elo) if distance >= 0 else (base_elo - 100)
+        gravity = 32.0 * (distance / span) ** 3
+        elo += k_factor * (quality - expected_quality) - gravity
 
         if severity is not None and severity < 10:
             stats["bad_snapshots"] += 1
@@ -206,6 +212,7 @@ def calculate_elo_for_line(events: List[dict], base_elo: float, k_factor: float)
                 elif severity < prev_severity:
                     elo -= 3.0
 
+        elo = max(100.0, min(3500.0, elo))
         prev_severity = severity
 
     good_ratio = 0.0

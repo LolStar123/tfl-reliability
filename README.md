@@ -4,7 +4,7 @@
 
 All eleven lines, current TfL service messages, observed-history Elo and live station arrivals.
 Opening the page requests current service; the cloud collector retains observations every
-15 minutes so the ratings keep building when nobody has the page open. The page displays
+10 minutes so the ratings keep building when nobody has the page open. The page displays
 collection start, observation counts and freshness. Missing data stays missing.
 
 <img src="examples/portfolio/preview.png" alt="Live Tube reliability leaderboard and line detail" width="900">
@@ -40,7 +40,7 @@ ratings use the stored observations and the same scoring function as the Python 
 
 Scheduled Actions can be delayed. The page keeps the last successful observation visible
 with its timestamp when a request fails. It never substitutes generated service events.
-Repeated refreshes replace the current quarter-hour record, avoiding duplicate score updates.
+Repeated refreshes replace the current ten-minute record, avoiding duplicate score updates.
 Service-closed periods do not count as running-service failures.
 
 ## Signal path
@@ -121,3 +121,17 @@ event resolution, and scoring changes separate where possible; run
 
 This project is available under the [MIT License](LICENSE). TfL data remains subject to
 Transport for London's own terms.
+
+### rating guardrails and monitoring
+
+Ratings have hard limits of **100?3500**. A cubic restoring force pulls toward 1500:
+`gravity = 32 * ((rating - 1500) / span)^3`, with span 1400 below baseline and 2000 above.
+Gravity is subtracted from each observation's update. It is small near baseline and strong near the bounds.
+Long good-service or cancellation runs settle inside the limits instead of drifting indefinitely.
+
+The collector and audit are scheduled at minutes 7, 17, 27, 37, 47 and 57 every hour.
+Each run checks all eleven lines, observation freshness, finite bounded ratings, and exact agreement
+between Python and browser calculations. A failed audit blocks publication and marks the Actions run failed.
+`data/health.json` contains the last successful audit receipt. Tests also exercise 100,000-observation
+runs and recovery after disruption. Stable service may legitimately converge; unchanged ratings alone
+are not evidence of a broken collector. GitHub schedules are best effort and can be delayed.

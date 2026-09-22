@@ -4,7 +4,7 @@ on:
     branches: [main]
     paths: ['examples/portfolio/**', 'tools/**', '.github/workflows/example-pages.yml', 'tfl_line_elo.py']
   schedule:
-    - cron: '7,22,37,52 * * * *'
+    - cron: '7,17,27,37,47,57 * * * *'
   workflow_dispatch:
 permissions:
   contents: write
@@ -36,10 +36,12 @@ jobs:
           if git show-ref --verify --quiet refs/remotes/origin/observations; then
             git show origin/observations:history.json > observations/history.json
           fi
-      - run: python -m unittest discover -s tools -p 'test_public.py'
+      - run: python -m unittest discover -s tools -p 'test_*.py'
       - run: node --test examples/portfolio/model.test.mjs
       - name: Collect current TfL service and calculate ratings
         run: python tools/collect_public.py
+      - name: Audit live ratings and cross-language agreement
+        run: python tools/audit_public.py
       - name: Persist observations independently of the source branch
         run: python tools/persist_observations.py
       - uses: actions/configure-pages@v5
@@ -48,3 +50,5 @@ jobs:
           path: examples/portfolio
       - uses: actions/deploy-pages@v4
         id: deployment
+      - name: Verify the published dashboard feed
+        run: python tools/check_deployment.py
