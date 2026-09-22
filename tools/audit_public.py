@@ -31,5 +31,13 @@ def audit(feed, now=None):
 if __name__ == '__main__':
     path = Path('examples/portfolio/data/network.json')
     result = audit(json.loads(path.read_text(encoding='utf-8')))
+    events=json.loads(Path('examples/portfolio/data/events.json').read_text())
+    if (datetime.now(timezone.utc)-datetime.fromisoformat(events['updated'])).total_seconds()>1800:raise ValueError('Train events are stale')
+    if len(events['lines'])!=11:raise ValueError('Missing event lines')
+    for row in events['lines'].values():
+        if not math.isfinite(row['elo']) or not 100<=row['elo']<=3500:raise ValueError('Unbounded event score')
+        if any(row[k]<0 for k in ['on_time','late','cancelled']):raise ValueError('Negative event count')
+    result['train_events_healthy']=True
+    result['train_event_updated']=events['updated']
     Path('examples/portfolio/data/health.json').write_text(json.dumps(result, indent=2))
     print(json.dumps(result, indent=2))

@@ -1,10 +1,16 @@
-# Sources
+# Data and model provenance
 
-Live line status and arrival predictions are fetched from the TfL Unified API.
-Collection began 22 September 2026. Observation timestamps and sample counts travel with
-the feed. The scoring model is tfl_line_elo.py; its browser port is model.mjs.
-The public collector excludes timetable-closed periods and picks the worst active status
-where TfL supplies multiple statuses. It keeps at most one observation per quarter-hour.
+Original team source: https://github.com/bento-boxing/Quantihack2026project/tree/tfl-live-elo
+Original screenshots and write-up: https://devpost.com/software/tfl-elo-tracker
 
-The old fixture demonstration has been replaced by the live network application.
-See TfL data terms: https://tfl.gov.uk/corporate/terms-and-conditions/transport-data-service
+`data/archive.json` contains only the original public SQLite `line_elo_snapshots` table:
+539 rows between 2026-03-28 16:02 and 17:00 UTC. Historical ratings are 621 to 2415.
+No historical records are presented as current service.
+
+`data/events.json` is generated from fresh TfL Line Arrivals responses. See collector source
+for the conservative sampling definition. Inferred stop calls are not official punctuality.
+No user accounts, API keys or private journey records are included.
+
+The original event gain/loss function is reused. Cubic gravity and 100?3500 limits are new
+safeguards. This update deliberately avoids the original disappearing-prediction cancellation
+heuristic. It does not claim to implement standard zero-sum pairwise Elo.

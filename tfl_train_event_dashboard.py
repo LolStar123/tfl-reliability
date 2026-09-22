@@ -13,7 +13,7 @@ from zoneinfo import ZoneInfo
 LONDON_TZ = ZoneInfo("Europe/London")
 BASE_ELO = 1200.0
 REVERSION_CENTER_ELO = 1500.0
-MIN_ELO = 1.0
+MIN_ELO = 100.0
 MAX_ELO = 3500.0
 LOW_EDGE_START = 800.0
 HIGH_EDGE_START = 2500.0

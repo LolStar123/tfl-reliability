@@ -35,11 +35,14 @@ jobs:
           mkdir -p observations
           if git show-ref --verify --quiet refs/remotes/origin/observations; then
             git show origin/observations:history.json > observations/history.json
+            git show origin/observations:events.json > observations/events.json 2>/dev/null || rm -f observations/events.json
           fi
       - run: python -m unittest discover -s tools -p 'test_*.py'
       - run: node --test examples/portfolio/model.test.mjs
       - name: Collect current TfL service and calculate ratings
         run: python tools/collect_public.py
+      - name: Collect real train-event evidence
+        run: python tools/collect_events.py
       - name: Audit live ratings and cross-language agreement
         run: python tools/audit_public.py
       - name: Persist observations independently of the source branch

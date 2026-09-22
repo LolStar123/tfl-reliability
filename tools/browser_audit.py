@@ -18,9 +18,16 @@ try:
   page.wait_for_function('!document.querySelector("#refresh").disabled')
   assert page.locator('.line').count()==11
   assert page.evaluate('__tfl.rows.every(r=>r.elo>=100&&r.elo<=3500)')
-  page.locator('[data-id="victoria"]').click()
-  assert page.locator('#line-title').inner_text()=='Victoria'
-  page.locator('#window').select_option('168')
+  page.locator('#dataset').select_option('archive')
+  page.locator('[data-view="history"]').click()
+  assert page.locator('#history-chart polyline').count()==11
+  page.locator('#line-toggles input').first.uncheck()
+  assert page.locator('#history-chart polyline').count()==10
+  page.locator('[data-view="candles"]').click()
+  assert page.locator('#candle-chart rect').count()>1
+  page.locator('#candle-line').select_option('victoria')
+  page.locator('[data-view="leaderboard"]').click()
+  page.locator('#dataset').select_option('live')
   with page.expect_download() as dl:page.locator('#download').click()
   assert dl.value.suggested_filename.endswith('.csv')
   page.set_viewport_size({'width':1280,'height':720})
