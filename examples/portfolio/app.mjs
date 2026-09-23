@@ -27,6 +27,7 @@ const $ = (s) => document.querySelector(s),
             minute: "2-digit",
         });
 const light = ["circle", "jubilee", "hammersmith-city", "waterloo-city"];
+let timeframeHours = 24;
 let live,
     archive,
     statuses = [],
@@ -146,18 +147,24 @@ function frame(body, min, max, times) {
         },
     ).join(
         "",
-    )}${body}<text x="55" y="350" fill="#9cabb8" font-size="12">${clock(times[0])}</text><text x="1070" y="350" text-anchor="end" fill="#9cabb8" font-size="12">${clock(times.at(-1))}</text></svg>`;
+    )}${body}<text x="55" y="350" fill="#9cabb8" font-size="12">${Date.parse(times.at(-1))-Date.parse(times[0])>86400000?stamp(times[0]):clock(times[0])}</text><text x="1070" y="350" text-anchor="end" fill="#9cabb8" font-size="12">${Date.parse(times.at(-1))-Date.parse(times[0])>86400000?stamp(times.at(-1)):clock(times.at(-1))}</text></svg>`;
 }
 function charts() {
-    if (series.length < 2) {
+    const end = Math.max(...series.map(s => Date.parse(s.at)));
+    const cutoff = timeframeHours ? end - timeframeHours * 3600000 : -Infinity;
+    const visibleSeries = series.filter(s => Date.parse(s.at) >= cutoff);
+    for (const b of document.querySelectorAll('[data-hours]')) b.setAttribute('aria-pressed', String(Number(b.dataset.hours) === timeframeHours));
+    for (const label of document.querySelectorAll('.range-summary')) label.textContent = visibleSeries.length ? stamp(visibleSeries[0].at) + ' to ' + stamp(visibleSeries.at(-1).at) + ' / ' + visibleSeries.length + ' observations' : 'No observations in this window.';
+    window.__tflRange = {hours:timeframeHours, count:visibleSeries.length, start:visibleSeries[0]?.at, end:visibleSeries.at(-1)?.at};
+    if (visibleSeries.length < 2) {
         $("#history-chart").innerHTML = $("#candle-chart").innerHTML =
-            '<p class="note">The next collected observation will start the time series. The original hackathon archive already contains the recovered history.</p>';
+            '<p class="note">Not enough observations in this window yet. Choose a wider timeframe.</p>';
         return;
     }
-    const times = series.map((s) => s.at),
+    const times = visibleSeries.map((s) => s.at),
         first = Date.parse(times[0]),
         span = Math.max(1, Date.parse(times.at(-1)) - first),
-        all = series.flatMap((s) =>
+        all = visibleSeries.flatMap((s) =>
             Object.entries(s.ratings)
                 .filter(([id]) => enabled.has(id))
                 .map(([, v]) => v),
@@ -175,7 +182,7 @@ function charts() {
             .filter((r) => enabled.has(r.id))
             .map(
                 (r) =>
-                    `<polyline points="${series
+                    `<polyline points="${visibleSeries
                         .filter((s) => s.ratings[r.id] !== undefined)
                         .map((s) => `${x(s.at)},${y(s.ratings[r.id])}`)
                         .join(
@@ -189,7 +196,7 @@ function charts() {
     );
     const id = $("#candle-line").value || selected,
         buckets = new Map();
-    for (const s of series) {
+    for (const s of visibleSeries) {
         const v = s.ratings[id];
         if (v === undefined) continue;
         const key = Math.floor(Date.parse(s.at) / 300000);
@@ -246,6 +253,7 @@ function show(next) {
 }
 for (const b of document.querySelectorAll("nav button"))
     b.onclick = () => show(b.dataset.view);
+for (const button of document.querySelectorAll('[data-hours]')) button.onclick = () => {timeframeHours = Number(button.dataset.hours); charts();};
 $("#dataset").onchange = render;
 $("#candle-line").onchange = charts;
 async function refresh() {

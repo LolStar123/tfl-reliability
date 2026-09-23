@@ -19,6 +19,18 @@ try:
   assert page.locator('.line').count()==11
   assert page.locator('#history-chart polyline').count()==11
   assert page.evaluate('__tfl.rows.every(r=>r.elo>=100&&r.elo<=3500)')
+  for width in (1280,390):
+   page.set_viewport_size({'width':width,'height':1000})
+   counts=[]
+   for hours in (1,6,24,168,720,8760,0):
+    page.locator(f'#history [data-hours="{hours}"]').click()
+    result=page.evaluate('window.__tflRange')
+    assert result['hours']==hours
+    assert page.locator('#history [aria-pressed="true"]').count()==1
+    assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1')
+    counts.append(result['count'])
+   assert counts==sorted(counts),counts
+  page.set_viewport_size({'width':1280,'height':1000})
   page.locator('#dataset').select_option('archive')
   page.locator('[data-view="history"]').click()
   assert page.locator('#history-chart polyline').count()==11

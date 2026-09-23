@@ -403,3 +403,5 @@ svg {
         font-size: 23px;
     }
 }
+
+.timeframes{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 9px}.timeframes button{min-height:42px;padding:9px 15px;border:1px solid #465565;background:#19232e;color:#dce7ef;font-size:14px;cursor:pointer}.timeframes button[aria-pressed="true"]{background:#d2e9f2;color:#102029;border-color:#d2e9f2;font-weight:700}.timeframes button:focus-visible{outline:2px solid #87cae5;outline-offset:3px}.range-summary{color:#9cabb8;font-size:13px;margin:0 0 14px}
