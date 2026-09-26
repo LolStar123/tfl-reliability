@@ -73,8 +73,7 @@ function render() {
             ),
         }));
         $("#updated").textContent = "archive / " + stamp(latest) + " 2026";
-        $("#notice").textContent =
-            "Original 28 March 2026 hackathon records. These are historical ratings and inferred outcome counts, not current service. The original scoring model is preserved in this archive.";
+        $("#notice").textContent = "hackathon archive · 28 march 2026";
     } else {
         rows = Object.values(live.lines);
         series = [
@@ -86,13 +85,7 @@ function render() {
         ];
         $("#updated").textContent =
             "train observations / " + stamp(live.updated);
-        $("#notice").textContent =
-            "* Sampled arrival estimates, not official totals. Late means a prediction slipped by over 60 seconds. Missing predictions are not counted as cancellations. Collection began " +
-            stamp(live.started) +
-            "." +
-            (Date.now() - Date.parse(live.updated) > 1800000
-                ? " Collection is over 30 minutes old."
-                : "");
+        $("#notice").textContent = "sampled predictions · ratings bounded from 100 to 3,500";
     }
     rows.sort((a, b) => b.elo - a.elo || a.name.localeCompare(b.name));
     $("#lines").innerHTML = rows
@@ -105,8 +98,12 @@ function render() {
         const b = e.target.closest("[data-id]");
         if (b) {
             selected = b.dataset.id;
-            $("#candle-line").value = selected;
-            show("candles");
+            enabled = enabled.size === 1 && enabled.has(selected)
+                ? new Set(Object.keys(colours))
+                : new Set([selected]);
+            for (const input of document.querySelectorAll("#line-toggles input"))
+                input.checked = enabled.has(input.value);
+            charts();
         }
     };
     $("#candle-line").innerHTML = rows

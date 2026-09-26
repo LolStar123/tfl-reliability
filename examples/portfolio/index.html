@@ -1,169 +1,19 @@
-<!doctype html>
-<html lang="en">
-    <meta charset="utf-8" /><meta
-        name="viewport"
-        content="width=device-width,initial-scale=1"
-    /><title>TfL Train Event Elo Dashboard</title
-    ><link rel="stylesheet" href="style.css" />
-    <body>
-        <main>
-            <header>
-                <div>
-                    <p class="eyebrow">live network / train event model</p>
-                    <h1>TfL reliability</h1>
-                </div>
-                <nav aria-label="Dashboard views">
-                    <button class="active" data-view="leaderboard">
-                        Elo leaderboard</button
-                    ><button data-view="history">Line chart</button
-                    ><button data-view="candles">Candle chart</button
-                    ><button data-view="events">Events</button
-                    ><button data-view="why">Why?</button>
-                </nav>
-            </header>
-            <div class="toolbar">
-                <label
-                    >data
-                    <select id="dataset">
-                        <option value="live">live collection</option>
-                        <option value="archive">
-                            original hackathon archive
-                        </option>
-                    </select></label
-                ><span id="updated">loading real observations...</span
-                ><button id="refresh">refresh</button
-                ><button id="download">export</button>
-            </div>
-            <section id="leaderboard" class="view">
-                <h2>Elo leaderboard</h2>
-                <div class="board-heading">
-                    <span>rank</span><span>lines</span><span>elo</span
-                    ><span>on-time <em>arrivals*</em></span
-                    ><span>late <em>arrivals*</em></span
-                    ><span>cancelled <em>trains*</em></span>
-                </div>
-                <div id="lines"></div>
-                <p class="legend">
-                    <i class="good"></i> Good service
-                    <i class="minor"></i> Minor delays
-                    <i class="delay"></i> Delays <i class="bad"></i> Severe
-                    delays / cancellations
-                </p>
-                <p class="note" id="notice"></p>
-            </section>
-            <section id="history" class="view" hidden>
-                <h2>reliability rating / all 11 lines</h2>
-                <div class="timeframes" role="group" aria-label="Chart timeframe"><button type="button" data-hours="1" aria-pressed="false">1 hour</button><button type="button" data-hours="6" aria-pressed="false">6 hours</button><button type="button" data-hours="24" aria-pressed="true">24 hours</button><button type="button" data-hours="168" aria-pressed="false">week</button><button type="button" data-hours="720" aria-pressed="false">month</button><button type="button" data-hours="8760" aria-pressed="false">year</button><button type="button" data-hours="0" aria-pressed="false">all time</button></div><p class="range-summary" aria-live="polite"></p>
-                <div id="line-toggles"></div>
-                <div id="history-chart"></div>
-                <p class="note">
-                    Elo against time, starting from the live model's 1500
-                    baseline. Subsequent points are collected rating updates;
-                    the archive shows its original recorded history.
-                </p>
-            </section>
-            <section id="candles" class="view" hidden>
-                <h2>Candle chart</h2>
-                <label
-                    >line
-                    <select id="candle-line"></select
-                ></label>
-                <div class="timeframes" role="group" aria-label="Chart timeframe"><button type="button" data-hours="1" aria-pressed="false">1 hour</button><button type="button" data-hours="6" aria-pressed="false">6 hours</button><button type="button" data-hours="24" aria-pressed="true">24 hours</button><button type="button" data-hours="168" aria-pressed="false">week</button><button type="button" data-hours="720" aria-pressed="false">month</button><button type="button" data-hours="8760" aria-pressed="false">year</button><button type="button" data-hours="0" aria-pressed="false">all time</button></div><p class="range-summary" aria-live="polite"></p>
-                <div id="candle-chart"></div>
-                <p class="note">
-                    Five-minute buckets: open, high, low and close of the
-                    observed ratings. Empty periods have no candle.
-                </p>
-            </section>
-            <section id="events" class="view" hidden>
-                <h2>Train events</h2>
-                <div id="event-list"></div>
-            </section>
-            <section id="why" class="view" hidden>
-                <h2>Why score the Tube?</h2>
-                <p>
-                    Each line earns or loses rating from observed train-stop
-                    outcomes. The original hackathon dashboard compared
-                    arrivals, late arrivals and inferred cancellations, with
-                    historical line and candle charts.
-                </p>
-                <p>
-                    The live collector samples TfL predictions three times, 20
-                    seconds apart, every ten minutes. An arrival estimate
-                    requires at least two sightings and a prediction within 30
-                    seconds of the stop. A late estimate means the ETA slipped
-                    over 60 seconds since its first sighting. These are sampled
-                    prediction-based estimates, not confirmed train movements or
-                    official punctuality figures.
-                </p>
-                <p>
-                    Disappearing predictions are not sufficient evidence of
-                    cancellation. The live cancellation column stays zero unless
-                    supported by a confirmed source. The original archive
-                    retains the original inferred cancellation counts and its
-                    historical model.
-                </p>
-                <p>
-                    The live model uses the original event gain/loss function,
-                    with cubic gravity toward 1500 and hard bounds of 100 and
-                    3500. Peak-time outcomes receive more weight. It is
-                    Elo-style, not a claim of standard zero-sum chess Elo.
-                </p>
-                <p>
-                    <a href="https://devpost.com/software/tfl-elo-tracker"
-                        >Original hackathon project</a
-                    >
-                    ?
-                    <a
-                        href="https://github.com/bento-boxing/Quantihack2026project/tree/tfl-live-elo"
-                        >Original team source</a
-                    >
-                    ? <a href="data/health.json">automated audit</a>
-                </p>
-            </section>
-            <section class="origin" aria-labelledby="origin-title">
-                <img
-                    src="assets/quantihack-team.png"
-                    alt="A group photograph from the QuantiHack event"
-                    width="1406"
-                    height="943"
-                    loading="lazy"
-                />
-                <div>
-                    <p class="eyebrow">built at quantihack 2026</p>
-                    <h2 id="origin-title">
-                        a competitive league for the morning commute.
-                    </h2>
-                    <p>
-                        Built by Atul Kanodia and Benjamin Toze after qualifying
-                        for the finals through a five-day trading competition.
-                        We turned live TfL data into a leaderboard for all
-                        eleven Underground lines, then took the idea from a
-                        brainstorming session to a deployed dashboard during the
-                        hackathon.
-                    </p>
-                    <a
-                        href="https://www.linkedin.com/feed/update/urn:li:activity:7444669989090902016/"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        >Benjamin's post</a
-                    ><a
-                        href="https://devpost.com/software/tfl-elo-tracker"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        >the hackathon submission</a
-                    >
-                </div>
-            </section>
-            <footer>
-                <a href="https://github.com/LolStar123/tfl-reliability"
-                    >source code</a
-                ><a
-                    href="https://lolstar123.github.io/just-a-little-further/"
-                    >atul's projects</a
-                ><span id="connection"></span>
-            </footer>
-        </main>
-        <script type="module" src="app.mjs"></script>
-    </body>
-</html>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>tube reliability leaderboard</title><link rel="stylesheet" href="style.css"></head><body>
+<header><a href="https://lolstar123.github.io/just-a-little-further/">atul / tube elo</a><nav><a href="https://devpost.com/software/tfl-elo-tracker">devpost</a><a href="https://github.com/LolStar123/tfl-reliability">source</a></nav></header>
+<main>
+<section class="hero"><p>live train observations</p><h1>which Tube line<br><em>keeps its rating?</em></h1><span id="updated">loading…</span></section>
+<section id="history" class="view">
+    <div class="chart-head"><h2>all eleven lines</h2><div class="timeframes" role="group" aria-label="Chart timeframe"><button data-hours="1">1h</button><button data-hours="6">6h</button><button data-hours="24" aria-pressed="true">24h</button><button data-hours="168">week</button><button data-hours="720">month</button><button data-hours="0">all</button></div></div>
+    <p class="range-summary" aria-live="polite"></p>
+    <div id="history-chart"></div>
+    <div id="line-toggles" aria-label="Tube lines"></div>
+</section>
+<section id="leaderboard" class="view">
+    <div class="board-title"><h2>table</h2><span>rating</span></div>
+    <div id="lines"></div>
+    <p id="notice"></p>
+</section>
+<details class="tools"><summary>data tools</summary><div class="toolbar"><label>source<select id="dataset"><option value="live">live collection</option><option value="archive">hackathon archive</option></select></label><button id="refresh">refresh</button><button id="download">export</button></div><span id="connection"></span></details>
+<section id="candles" hidden><select id="candle-line"></select><div id="candle-chart"></div></section><section id="events" hidden><div id="event-list"></div></section><section id="why" hidden></section>
+</main>
+<script type="module" src="app.mjs"></script></body></html>
