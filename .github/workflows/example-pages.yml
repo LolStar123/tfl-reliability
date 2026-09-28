@@ -4,7 +4,12 @@ on:
     branches: [main]
     paths: ['examples/portfolio/**', 'tools/**', '.github/workflows/example-pages.yml', 'tfl_line_elo.py']
   schedule:
-    - cron: '7,17,27,37,47,57 * * * *'
+    - cron: '7 * * * *'
+    - cron: '17 * * * *'
+    - cron: '27 * * * *'
+    - cron: '37 * * * *'
+    - cron: '47 * * * *'
+    - cron: '57 * * * *'
   workflow_dispatch:
 permissions:
   contents: write
@@ -13,6 +18,7 @@ permissions:
 concurrency:
   group: live-tube-feed
   cancel-in-progress: false
+  queue: max
 jobs:
   example:
     runs-on: ubuntu-latest
@@ -38,15 +44,25 @@ jobs:
             git show origin/observations:events.json > observations/events.json 2>/dev/null || rm -f observations/events.json
           fi
       - run: python -m unittest discover -s tools -p 'test_*.py'
-      - run: node --test examples/portfolio/model.test.mjs
-      - name: Collect current TfL service and calculate ratings
-        run: python tools/collect_public.py
-      - name: Collect real train-event evidence
-        run: python tools/collect_events.py
-      - name: Audit live ratings and cross-language agreement
-        run: python tools/audit_public.py
-      - name: Persist observations independently of the source branch
-        run: python tools/persist_observations.py
+      - run: node --test examples/portfolio/*.test.mjs
+      - name: Collect and persist real Tube observations
+        shell: bash
+        run: |
+          cycles=1
+          if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then cycles=6; fi
+          for ((cycle=1; cycle<=cycles; cycle++)); do
+            started=$(date +%s)
+            echo "Collection cycle $cycle of $cycles"
+            python tools/collect_public.py
+            python tools/collect_events.py
+            python tools/audit_public.py
+            python tools/persist_observations.py
+            if (( cycle < cycles )); then
+              elapsed=$(($(date +%s)-started))
+              wait=$((600-elapsed))
+              if (( wait > 0 )); then sleep "$wait"; fi
+            fi
+          done
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

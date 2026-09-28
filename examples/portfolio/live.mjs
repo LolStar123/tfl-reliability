@@ -78,3 +78,58 @@ export function leaderboard(feed, hours = 24) {
         })
         .sort((a, b) => b.elo - a.elo || a.name.localeCompare(b.name));
 }
+
+export function eventSeries(feed) {
+    const ids = new Set(Object.keys(feed.lines || {})),
+        ratings = Object.fromEntries([...ids].map((id) => [id, 1500])),
+        history = [...(feed.history || [])]
+            .filter((row) => Number.isFinite(Date.parse(row.at)))
+            .sort((a, b) => Date.parse(a.at) - Date.parse(b.at)),
+        events = [...(feed.events || [])]
+            .filter(
+                (event) =>
+                    ids.has(event.line_id) &&
+                    Number.isFinite(event.elo) &&
+                    Number.isFinite(Date.parse(event.at)),
+            )
+            .sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+    if (!events.length)
+        return [
+            { at: feed.started, ratings: { ...ratings }, observed: [] },
+            ...history.map((row) => ({
+                at: row.at,
+                ratings: { ...row.ratings },
+                observed: [...ids],
+            })),
+        ];
+
+    const firstEvent = Date.parse(events[0].at),
+        series = [];
+    for (const row of history.filter((row) => Date.parse(row.at) < firstEvent)) {
+        Object.assign(ratings, row.ratings);
+        series.push({
+            at: row.at,
+            ratings: { ...ratings },
+            observed: [...ids],
+            eventCount: 0,
+        });
+    }
+    if (!series.length)
+        series.push({
+            at: feed.started,
+            ratings: { ...ratings },
+            observed: [],
+            eventCount: 0,
+        });
+
+    for (const event of events) {
+        ratings[event.line_id] = event.elo;
+        series.push({
+            at: event.at,
+            ratings: { ...ratings },
+            observed: [event.line_id],
+            eventCount: 1,
+        });
+    }
+    return series;
+}

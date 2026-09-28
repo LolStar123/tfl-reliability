@@ -32,15 +32,20 @@ try:
         page.wait_for_function("!document.querySelector('#refresh').disabled")
         assert page.locator(".line").count() == 11
         assert page.locator("#history-chart polyline").count() == 11
+        assert page.locator("#history-chart .data-blip").count() > 11
         assert page.evaluate("__tfl.rows.every(r => r.elo >= 100 && r.elo <= 3500)")
 
         counts = []
+        event_counts = []
         for hours in (1, 6, 24, 168, 720, 0):
             page.locator(f'#history [data-hours="{hours}"]').click()
             result = page.evaluate("window.__tflRange")
             assert result["hours"] == hours
             counts.append(result["count"])
+            event_counts.append(result["events"])
         assert counts == sorted(counts), counts
+        assert event_counts == sorted(event_counts), event_counts
+        assert event_counts[-1] > 0 and counts[-1] >= event_counts[-1], (event_counts, counts)
 
         page.locator(".line").first.click()
         assert page.locator("#history-chart polyline").count() == 1

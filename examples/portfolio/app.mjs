@@ -1,4 +1,4 @@
-import { colours, flatten } from "./live.mjs";
+import { colours, eventSeries, flatten } from "./live.mjs";
 const $ = (s) => document.querySelector(s),
     esc = (s) =>
         String(s ?? "").replace(
@@ -27,6 +27,8 @@ const $ = (s) => document.querySelector(s),
             minute: "2-digit",
         });
 const light = ["circle", "jubilee", "hammersmith-city", "waterloo-city"];
+const observationFeed =
+    "https://raw.githubusercontent.com/LolStar123/tfl-reliability/observations/feed.json";
 let timeframeHours = 24;
 let live,
     archive,
@@ -76,13 +78,7 @@ function render() {
         $("#notice").textContent = "hackathon archive · 28 march 2026";
     } else {
         rows = Object.values(live.lines);
-        series = [
-            {
-                at: live.started,
-                ratings: Object.fromEntries(rows.map((r) => [r.id, 1500])),
-            },
-            ...live.history,
-        ];
+        series = eventSeries(live);
         $("#updated").textContent =
             "train observations / " + stamp(live.updated);
         $("#notice").textContent = "sampled predictions · ratings bounded from 100 to 3,500";
@@ -147,12 +143,33 @@ function frame(body, min, max, times) {
     )}${body}<text x="55" y="350" fill="#9cabb8" font-size="12">${Date.parse(times.at(-1))-Date.parse(times[0])>86400000?stamp(times[0]):clock(times[0])}</text><text x="1070" y="350" text-anchor="end" fill="#9cabb8" font-size="12">${Date.parse(times.at(-1))-Date.parse(times[0])>86400000?stamp(times.at(-1)):clock(times.at(-1))}</text></svg>`;
 }
 function charts() {
-    const end = Math.max(...series.map(s => Date.parse(s.at)));
+    const historical = $("#dataset").value === "archive",
+        end = Math.max(...series.map(s => Date.parse(s.at)));
     const cutoff = timeframeHours ? end - timeframeHours * 3600000 : -Infinity;
     const visibleSeries = series.filter(s => Date.parse(s.at) >= cutoff);
     for (const b of document.querySelectorAll('[data-hours]')) b.setAttribute('aria-pressed', String(Number(b.dataset.hours) === timeframeHours));
-    for (const label of document.querySelectorAll('.range-summary')) label.textContent = visibleSeries.length ? stamp(visibleSeries[0].at) + ' to ' + stamp(visibleSeries.at(-1).at) + ' / ' + visibleSeries.length + ' observations' : 'No observations in this window.';
-    window.__tflRange = {hours:timeframeHours, count:visibleSeries.length, start:visibleSeries[0]?.at, end:visibleSeries.at(-1)?.at};
+    const trainObservations = visibleSeries.reduce(
+        (total, point) => total + (point.eventCount || 0),
+        0,
+    );
+    for (const label of document.querySelectorAll(".range-summary"))
+        label.textContent = visibleSeries.length
+            ? stamp(visibleSeries[0].at) +
+              " to " +
+              stamp(visibleSeries.at(-1).at) +
+              " / " +
+              (historical
+                  ? visibleSeries.length + " observations"
+                  : trainObservations.toLocaleString("en-GB") +
+                    " train observations")
+            : "No observations in this window.";
+    window.__tflRange = {
+        hours: timeframeHours,
+        count: visibleSeries.length,
+        events: trainObservations,
+        start: visibleSeries[0]?.at,
+        end: visibleSeries.at(-1)?.at,
+    };
     if (visibleSeries.length < 2) {
         $("#history-chart").innerHTML = $("#candle-chart").innerHTML =
             '<p class="note">Not enough observations in this window yet. Choose a wider timeframe.</p>';
@@ -177,15 +194,29 @@ function charts() {
     $("#history-chart").innerHTML = frame(
         rows
             .filter((r) => enabled.has(r.id))
-            .map(
-                (r) =>
-                    `<polyline points="${visibleSeries
-                        .filter((s) => s.ratings[r.id] !== undefined)
+            .map((r) => {
+                const colour =
+                        colours[r.id] === "#303237"
+                            ? "#ddd"
+                            : colours[r.id],
+                    points = visibleSeries.filter(
+                        (s) => s.ratings[r.id] !== undefined,
+                    ),
+                    line = points
                         .map((s) => `${x(s.at)},${y(s.ratings[r.id])}`)
-                        .join(
-                            " ",
-                        )}" fill="none" stroke="${colours[r.id] === "#303237" ? "#ddd" : colours[r.id]}" stroke-width="2"><title>${esc(r.name)}</title></polyline>`,
-            )
+                        .join(" "),
+                    blips = points
+                        .filter(
+                            (s) =>
+                                !s.observed || s.observed.includes(r.id),
+                        )
+                        .map(
+                            (s) =>
+                                `<circle class="data-blip" cx="${x(s.at)}" cy="${y(s.ratings[r.id])}" r="2.6" fill="${colour}" stroke="#0c1117" stroke-width="1"><title>${esc(r.name)} / ${clock(s.at)} / ${Math.round(s.ratings[r.id])}</title></circle>`,
+                        )
+                        .join("");
+                return `<polyline points="${line}" fill="none" stroke="${colour}" stroke-width="2"><title>${esc(r.name)}</title></polyline>${blips}`;
+            })
             .join(""),
         min,
         max,
@@ -257,8 +288,13 @@ async function refresh() {
     const b = $("#refresh");
     b.disabled = true;
     try {
+        const liveFeed = get(
+            observationFeed +
+                "?bucket=" +
+                Math.floor(Date.now() / 300000),
+        ).catch(() => get("data/events.json"));
         const results = await Promise.allSettled([
-            get("data/events.json"),
+            liveFeed,
             get("data/archive.json"),
             get("https://api.tfl.gov.uk/Line/Mode/tube/Status"),
         ]);
@@ -302,4 +338,4 @@ show("history");
 await refresh();
 setInterval(() => {
     if (!document.hidden) refresh();
-}, 60000);
+}, 300000);

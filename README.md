@@ -37,7 +37,7 @@ The former tfl-elo.uk endpoint was unavailable when this restoration was made.
 ```sh
 python -m http.server 8000 --directory examples/portfolio
 python -m unittest discover -s tools -p 'test_*.py'
-node --test examples/portfolio/model.test.mjs
+node --test examples/portfolio/*.test.mjs
 pip install playwright
 python -m playwright install chromium
 python tools/browser_audit.py
@@ -56,9 +56,10 @@ python tools/browser_audit.py
 
 The separate status-based model remains in `tfl_line_elo.py` for comparison; it no longer
 supplies the landing page's event ratings. Collected state lives on the `observations` branch,
-not in source commits. Every ten-minute run audits the data before publishing and verifies the
-public feed afterwards. Browser checks run after deployment and every four hours. GitHub's
-scheduler is best effort, so data timestamps remain visible.
+not in source commits. The dashboard reads that branch directly, expands the retained train
+events into chart points, and refreshes every five minutes while visible. Scheduled jobs stay
+alive for six audited ten-minute collection cycles so a delayed GitHub cron does not collapse
+an hour of evidence into one point. Browser checks run after deployment and every four hours.
 
 Tests include 100,000 consecutive adverse or favourable observations, recovery, duplicate
 sightings, missing predictions and exact agreement between status-model implementations.
