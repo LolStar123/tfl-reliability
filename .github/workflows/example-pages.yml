@@ -11,6 +11,11 @@ on:
     - cron: '47 * * * *'
     - cron: '57 * * * *'
   workflow_dispatch:
+    inputs:
+      cycles:
+        description: Number of ten-minute collection cycles
+        required: false
+        default: '1'
 permissions:
   contents: write
   pages: write
@@ -47,9 +52,19 @@ jobs:
       - run: node --test examples/portfolio/*.test.mjs
       - name: Collect and persist real Tube observations
         shell: bash
+        env:
+          REQUESTED_CYCLES: ${{ inputs.cycles || '1' }}
         run: |
           cycles=1
-          if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then cycles=6; fi
+          if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then
+            cycles=6
+          elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            cycles="$REQUESTED_CYCLES"
+          fi
+          if [[ ! "$cycles" =~ ^[1-6]$ ]]; then
+            echo "cycles must be between 1 and 6" >&2
+            exit 2
+          fi
           for ((cycle=1; cycle<=cycles; cycle++)); do
             started=$(date +%s)
             echo "Collection cycle $cycle of $cycles"
