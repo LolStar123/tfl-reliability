@@ -215,7 +215,7 @@ function charts() {
                                 `<circle class="data-blip" cx="${x(s.at)}" cy="${y(s.ratings[r.id])}" r="2.6" fill="${colour}" stroke="#0c1117" stroke-width="1"><title>${esc(r.name)} / ${clock(s.at)} / ${Math.round(s.ratings[r.id])}</title></circle>`,
                         )
                         .join("");
-                return `<polyline points="${line}" fill="none" stroke="${colour}" stroke-width="2"><title>${esc(r.name)}</title></polyline>${blips}`;
+                return `<polyline class="rating-line" points="${line}" fill="none" stroke="${colour}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><title>${esc(r.name)}</title></polyline>${blips}`;
             })
             .join(""),
         min,
