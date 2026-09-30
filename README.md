@@ -61,6 +61,11 @@ events into chart points, and refreshes every five minutes while visible. Schedu
 alive for six audited ten-minute collection cycles so a delayed GitHub cron does not collapse
 an hour of evidence into one point. Browser checks run after deployment and every four hours.
 
+Source pushes publish the dashboard separately from collection. A push restores the durable
+event feed, checks current service status and deploys without waiting for the hour-long
+collector. Scheduled and manual runs collect and persist observations without redeploying
+older interface code. The live dashboard continues reading the latest observation branch.
+
 Tests include 100,000 consecutive adverse or favourable observations, recovery, duplicate
 sightings, missing predictions and exact agreement between status-model implementations.
 

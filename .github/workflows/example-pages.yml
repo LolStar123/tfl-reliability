@@ -21,7 +21,7 @@ permissions:
   pages: write
   id-token: write
 concurrency:
-  group: live-tube-feed
+  group: ${{ github.event_name == 'push' && 'tube-demo-pages' || 'live-tube-feed' }}
   cancel-in-progress: false
   queue: max
 jobs:
@@ -47,10 +47,17 @@ jobs:
           if git show-ref --verify --quiet refs/remotes/origin/observations; then
             git show origin/observations:history.json > observations/history.json
             git show origin/observations:events.json > observations/events.json 2>/dev/null || rm -f observations/events.json
+            git show origin/observations:feed.json > examples/portfolio/data/events.json
           fi
       - run: python -m unittest discover -s tools -p 'test_*.py'
       - run: node --test examples/portfolio/*.test.mjs
+      - name: Prepare publication data
+        if: github.event_name == 'push'
+        run: |
+          python tools/collect_public.py
+          python tools/audit_public.py
       - name: Collect and persist real Tube observations
+        if: github.event_name != 'push'
         shell: bash
         env:
           REQUESTED_CYCLES: ${{ inputs.cycles || '1' }}
@@ -79,10 +86,14 @@ jobs:
             fi
           done
       - uses: actions/configure-pages@v5
+        if: github.event_name == 'push'
       - uses: actions/upload-pages-artifact@v3
+        if: github.event_name == 'push'
         with:
           path: examples/portfolio
       - uses: actions/deploy-pages@v4
+        if: github.event_name == 'push'
         id: deployment
       - name: Verify the published dashboard feed
+        if: github.event_name == 'push'
         run: python tools/check_deployment.py
