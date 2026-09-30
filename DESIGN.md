@@ -13,3 +13,5 @@ Rules:
 - Keep live and archived observations visibly separate.
 - Ratings stay between 100 and 3,500 and retain restoring pressure toward 1,500.
 - Desktop and mobile preserve timeframe controls, line focus, export and source switching.
+
+The current round loads ratings independently of the service-status API and loads the archive on demand. Line focus has an explicit show-all recovery and cannot hide the final selected line. Mobile timeframe controls fit without horizontal scrolling; legend targets and ranking rows retain keyboard focus and touch-sized heights.

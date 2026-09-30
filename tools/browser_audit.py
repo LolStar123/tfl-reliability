@@ -54,6 +54,7 @@ try:
 
         page.locator("details.tools summary").click()
         page.locator("#dataset").select_option("archive")
+        page.wait_for_function("window.__tfl.dataset === 'archive'")
         assert page.locator("#history-chart polyline").count() == 11
         page.locator("#dataset").select_option("live")
         with page.expect_download() as download:

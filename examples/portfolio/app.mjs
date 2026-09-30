@@ -49,8 +49,16 @@ async function get(url) {
 function statusClass(s) {
     return s === 10 ? "good" : s >= 7 ? "minor" : s >= 5 ? "delay" : "bad";
 }
+function syncSelection() {
+    for (const button of document.querySelectorAll('#lines .line'))
+        button.setAttribute('aria-pressed', String(enabled.size === 1 && enabled.has(button.dataset.id)));
+    for (const input of document.querySelectorAll('#line-toggles input'))
+        input.checked = enabled.has(input.value);
+    $('#all-lines').hidden = enabled.size === Object.keys(colours).length;
+}
 function render() {
     const historical = $("#dataset").value === "archive";
+    if (historical && !archive) return;
     if (historical) {
         const latest = archive.snapshots.at(-1).snapshot_utc;
         rows = archive.snapshots
@@ -97,8 +105,7 @@ function render() {
             enabled = enabled.size === 1 && enabled.has(selected)
                 ? new Set(Object.keys(colours))
                 : new Set([selected]);
-            for (const input of document.querySelectorAll("#line-toggles input"))
-                input.checked = enabled.has(input.value);
+            syncSelection();
             charts();
         }
     };
@@ -115,11 +122,17 @@ function render() {
         )
         .join("");
     $("#line-toggles").onchange = (e) => {
+        if (!e.target.checked && enabled.size === 1) {
+            e.target.checked = true;
+            return;
+        }
         e.target.checked
             ? enabled.add(e.target.value)
             : enabled.delete(e.target.value);
+        syncSelection();
         charts();
     };
+    syncSelection();
     charts();
     events();
     window.__tfl = {
@@ -131,18 +144,29 @@ function render() {
     };
 }
 function frame(body, min, max, times) {
-    return `<svg viewBox="0 0 1100 380" role="img" aria-label="Recorded train-event Elo"><rect width="1100" height="380" fill="#0c1117"/>${Array.from(
+    const {width,height,left,right,bottom,range} = chartDimensions();
+    return `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Recorded train-event Elo"><rect width="${width}" height="${height}" fill="#0c1117"/>${Array.from(
         { length: 5 },
         (_, i) => {
-            const y = 25 + i * 72,
+            const y = 25 + i * range / 4,
                 v = max - ((max - min) * i) / 4;
-            return `<line x1="55" x2="1070" y1="${y}" y2="${y}" stroke="#262f38"/><text x="4" y="${y + 4}" fill="#9cabb8" font-size="11">${Math.round(v)}</text>`;
+            return `<line x1="${left}" x2="${right}" y1="${y}" y2="${y}" stroke="#262f38"/><text x="4" y="${y + 4}" fill="#9cabb8" font-size="11">${Math.round(v)}</text>`;
         },
     ).join(
         "",
-    )}${body}<text x="55" y="350" fill="#9cabb8" font-size="12">${Date.parse(times.at(-1))-Date.parse(times[0])>86400000?stamp(times[0]):clock(times[0])}</text><text x="1070" y="350" text-anchor="end" fill="#9cabb8" font-size="12">${Date.parse(times.at(-1))-Date.parse(times[0])>86400000?stamp(times.at(-1)):clock(times.at(-1))}</text></svg>`;
+    )}${body}<text x="${left}" y="${height-30}" fill="#9cabb8" font-size="12">${Date.parse(times.at(-1))-Date.parse(times[0])>86400000?stamp(times[0]):clock(times[0])}</text><text x="${right}" y="${height-30}" text-anchor="end" fill="#9cabb8" font-size="12">${Date.parse(times.at(-1))-Date.parse(times[0])>86400000?stamp(times.at(-1)):clock(times.at(-1))}</text></svg>`;
+}
+function chartDimensions() {
+    const mobile = innerWidth <= 650;
+    const width = mobile ? Math.max(290, $('#history-chart').clientWidth) : 1100;
+    const height = mobile ? 300 : 380;
+    return {width,height,left:mobile?42:55,right:width-(mobile?12:30),bottom:height-67,range:height-92};
 }
 function charts() {
+    const dimensions = chartDimensions();
+    $('#history h2').textContent = enabled.size === 11 ? 'all eleven lines'
+        : enabled.size === 1 ? rows.find(row => enabled.has(row.id))?.name || 'line history'
+        : `${enabled.size} lines`;
     const historical = $("#dataset").value === "archive",
         end = Math.max(...series.map(s => Date.parse(s.at)));
     const cutoff = timeframeHours ? end - timeframeHours * 3600000 : -Infinity;
@@ -189,8 +213,8 @@ function charts() {
         max = all.length
             ? Math.ceil((Math.max(...all) + 40) / 100) * 100
             : 3500,
-        x = (at) => 55 + ((Date.parse(at) - first) / span) * 1015,
-        y = (v) => 313 - ((v - min) / (max - min)) * 288;
+        x = (at) => dimensions.left + ((Date.parse(at) - first) / span) * (dimensions.right-dimensions.left),
+        y = (v) => dimensions.bottom - ((v - min) / (max - min)) * dimensions.range;
     $("#history-chart").innerHTML = frame(
         rows
             .filter((r) => enabled.has(r.id))
@@ -235,12 +259,12 @@ function charts() {
         vals = entries.flatMap(([, v]) => v),
         lo = Math.floor((Math.min(...vals) - 30) / 50) * 50,
         hi = Math.ceil((Math.max(...vals) + 30) / 50) * 50,
-        cy = (v) => 313 - ((v - lo) / (hi - lo)) * 288,
-        width = Math.min(70, 800 / entries.length);
+        cy = (v) => dimensions.bottom - ((v - lo) / (hi - lo)) * dimensions.range,
+        width = Math.min(70, (dimensions.right-dimensions.left)*.8 / entries.length);
     $("#candle-chart").innerHTML = frame(
         entries
             .map(([k, v], i) => {
-                const xx = 75 + ((i + 0.5) / entries.length) * 970,
+                const xx = dimensions.left + ((i + 0.5) / entries.length) * (dimensions.right-dimensions.left),
                     o = v[0],
                     cl = v.at(-1),
                     top = Math.max(o, cl),
@@ -282,7 +306,24 @@ function show(next) {
 for (const b of document.querySelectorAll("nav button"))
     b.onclick = () => show(b.dataset.view);
 for (const button of document.querySelectorAll('[data-hours]')) button.onclick = () => {timeframeHours = Number(button.dataset.hours); charts();};
-$("#dataset").onchange = render;
+$("#dataset").onchange = async () => {
+    if ($('#dataset').value === 'archive' && !archive) {
+        $('#updated').textContent = 'loading archive...';
+        try { archive = await get('data/archive.json'); }
+        catch {
+            $('#dataset').value = 'live';
+            render();
+            $('#notice').textContent = 'Archive unavailable. Try again from data tools.';
+            return;
+        }
+    }
+    render();
+};
+$('#all-lines').onclick = () => {
+    enabled = new Set(Object.keys(colours));
+    syncSelection();
+    charts();
+};
 $("#candle-line").onchange = charts;
 async function refresh() {
     const b = $("#refresh");
@@ -293,18 +334,20 @@ async function refresh() {
                 "?bucket=" +
                 Math.floor(Date.now() / 300000),
         ).catch(() => get("data/events.json"));
-        const results = await Promise.allSettled([
-            liveFeed,
-            get("data/archive.json"),
-            get("https://api.tfl.gov.uk/Line/Mode/tube/Status"),
-        ]);
-        if (results[0].status === "fulfilled") live = results[0].value;
-        if (results[1].status === "fulfilled") archive = results[1].value;
-        if (results[2].status === "fulfilled") {
-            statuses = flatten(results[2].value);
-            $("#connection").textContent = "live service connected";
+        const serviceFeed = get('https://api.tfl.gov.uk/Line/Mode/tube/Status');
+        const serviceResult = serviceFeed.then(value => ({value}), () => ({value:null}));
+        live = await liveFeed;
+        render();
+        const result = await serviceResult;
+        if (result.value) {
+            try {
+                statuses = flatten(result.value);
+                $("#connection").textContent = "live service connected";
+            } catch {
+                statuses = [];
+                $('#connection').textContent = 'service feed unavailable';
+            }
         } else $("#connection").textContent = "service feed unavailable";
-        if (!live || !archive) throw Error("Saved train data unavailable");
         render();
     } catch (e) {
         $("#notice").textContent =
@@ -334,6 +377,11 @@ $("#download").onclick = () => {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 $("#history").after($("#leaderboard"));
+let resizeFrame;
+addEventListener('resize', () => {
+    cancelAnimationFrame(resizeFrame);
+    resizeFrame = requestAnimationFrame(() => { if (series.length) charts(); });
+});
 show("history");
 await refresh();
 setInterval(() => {
