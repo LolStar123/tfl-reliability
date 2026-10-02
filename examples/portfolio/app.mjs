@@ -86,13 +86,13 @@ function render() {
             ),
         }));
         $("#updated").textContent = "archive / " + stamp(latest) + " 2026";
-        $("#notice").textContent = "hackathon archive · 28 march 2026";
+        $("#notice").textContent = "Historical ratings";
     } else {
         rows = Object.values(live.lines);
         series = eventSeries(live);
         $("#updated").textContent =
             (observationSource === "bundled snapshot" ? "bundled snapshot / " : "train observations / ") + stamp(live.updated);
-        $("#notice").textContent = "sampled predictions · ratings bounded from 100 to 3,500";
+        $("#notice").textContent = "Prediction estimates, not confirmed arrivals";
     }
     rows.sort((a, b) => b.elo - a.elo || a.name.localeCompare(b.name));
     $("#lines").innerHTML = rows
@@ -167,7 +167,7 @@ function chartDimensions() {
 }
 function charts() {
     const dimensions = chartDimensions();
-    $('#history h2').textContent = enabled.size === 11 ? 'All eleven lines'
+    $('#history h2').textContent = enabled.size === 11 ? 'Rating history'
         : enabled.size === 1 ? rows.find(row => enabled.has(row.id))?.name || 'line history'
         : `${enabled.size} lines`;
     const historical = $("#dataset").value === "archive",
@@ -181,11 +181,7 @@ function charts() {
     );
     for (const label of document.querySelectorAll(".range-summary"))
         label.textContent = visibleSeries.length
-            ? stamp(visibleSeries[0].at) +
-              " to " +
-              stamp(visibleSeries.at(-1).at) +
-              " / " +
-              (historical
+            ? (historical
                   ? visibleSeries.length + " observations"
                   : trainObservations.toLocaleString("en-GB") +
                     " train observations")
@@ -284,7 +280,7 @@ function charts() {
 function events() {
     const historical = $("#dataset").value === "archive";
     $("#event-list").innerHTML = historical
-        ? '<p class="note">The recovered archive contains aggregate ratings and counts. Individual raw events remain in the original SQLite database linked in the repository provenance.</p>'
+        ? '<p class="note">Archive: aggregate ratings only. <a href="https://github.com/LolStar123/tfl-reliability/blob/main/PROVENANCE.md">Raw-event source</a></p>'
         : live.events
               .slice(-100)
               .reverse()
@@ -293,7 +289,7 @@ function events() {
                       `<div class="event"><span>${clock(e.at)}</span><span>${esc(e.line_id)}</span><span>${esc(e.station)}</span><span>${esc(e.outcome)}${e.delay_seconds ? " +" + e.delay_seconds + "s" : ""}</span></div>`,
               )
               .join("") ||
-          '<p class="note">Waiting for repeated near-stop predictions. No events have been invented.</p>';
+          '<p class="note">No sampled events yet.</p>';
 }
 function show(next) {
     view = next;
@@ -351,7 +347,7 @@ async function refresh() {
         if (result.value) {
             try {
                 statuses = flatten(result.value);
-                $("#connection").textContent = "live service connected";
+                $("#connection").textContent = "";
             } catch {
                 statuses = [];
                 $('#connection').textContent = 'service feed unavailable';
