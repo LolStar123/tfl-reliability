@@ -148,6 +148,8 @@ function render() {
 }
 function frame(body, min, max, times) {
     const {width,height,left,right,bottom,range} = chartDimensions();
+    const londonDay = (at) => new Date(at).toLocaleDateString("en-GB", {timeZone: "Europe/London"});
+    const crossesDay = londonDay(times[0]) !== londonDay(times.at(-1));
     return `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Recorded train-event Elo"><rect width="${width}" height="${height}" fill="#0c1117"/>${Array.from(
         { length: 5 },
         (_, i) => {
@@ -157,7 +159,7 @@ function frame(body, min, max, times) {
         },
     ).join(
         "",
-    )}${body}<text x="${left}" y="${height-30}" fill="#9cabb8" font-size="12">${Date.parse(times.at(-1))-Date.parse(times[0])>86400000?stamp(times[0]):clock(times[0])}</text><text x="${right}" y="${height-30}" text-anchor="end" fill="#9cabb8" font-size="12">${Date.parse(times.at(-1))-Date.parse(times[0])>86400000?stamp(times.at(-1)):clock(times.at(-1))}</text></svg>`;
+    )}${body}<text x="${left}" y="${height-30}" fill="#9cabb8" font-size="12">${crossesDay?stamp(times[0]):clock(times[0])}</text><text x="${right}" y="${height-30}" text-anchor="end" fill="#9cabb8" font-size="12">${crossesDay?stamp(times.at(-1)):clock(times.at(-1))}</text></svg>`;
 }
 function chartDimensions() {
     const mobile = innerWidth <= 650;
