@@ -26,10 +26,12 @@ const $ = (s) => document.querySelector(s),
             hour: "2-digit",
             minute: "2-digit",
         });
+$("#download").disabled = true;
 const light = ["circle", "jubilee", "hammersmith-city", "waterloo-city"];
 const observationFeed =
     "https://raw.githubusercontent.com/LolStar123/tfl-reliability/observations/feed.json";
 let timeframeHours = 24;
+let observationSource = "durable feed";
 let live,
     archive,
     statuses = [],
@@ -58,7 +60,8 @@ function syncSelection() {
 }
 function render() {
     const historical = $("#dataset").value === "archive";
-    if (historical && !archive) return;
+    if (historical ? !archive : !live) return;
+    $("#download").disabled = false;
     if (historical) {
         const latest = archive.snapshots.at(-1).snapshot_utc;
         rows = archive.snapshots
@@ -88,14 +91,14 @@ function render() {
         rows = Object.values(live.lines);
         series = eventSeries(live);
         $("#updated").textContent =
-            "train observations / " + stamp(live.updated);
+            (observationSource === "bundled snapshot" ? "bundled snapshot / " : "train observations / ") + stamp(live.updated);
         $("#notice").textContent = "sampled predictions · ratings bounded from 100 to 3,500";
     }
     rows.sort((a, b) => b.elo - a.elo || a.name.localeCompare(b.name));
     $("#lines").innerHTML = rows
         .map((r, i) => {
             const st = statuses.find((s) => s.id === r.id);
-            return `<button class="line" data-id="${r.id}" aria-pressed="${selected === r.id}" aria-label="${esc(r.name)}, Elo ${r.elo.toFixed(1)}"><span class="rank p${i + 1}"><b>${i + 1}</b></span><span class="line-name"><span class="badge" style="--line:${colours[r.id]};--fg:${light.includes(r.id) ? "#111" : "#fff"}">${esc(r.name)}</span><i class="status ${historical || !st ? "" : statusClass(st.severity)}" title="${historical ? "Historical service status unavailable" : esc(st?.status || "status unavailable")}"></i></span><span class="elo">${Math.round(r.elo)}</span><span>${r.on_time.toLocaleString()}</span><span>${r.late.toLocaleString()}</span><span>${r.cancelled.toLocaleString()}</span></button>`;
+            return `<button class="line" data-id="${r.id}" aria-pressed="${selected === r.id}" aria-label="${esc(r.name)}, Elo ${r.elo.toFixed(1)}, ${historical ? "archive" : esc(st?.status || "status unavailable")}"><span class="rank p${i + 1}"><b>${i + 1}</b></span><span class="line-name"><span class="badge" style="--line:${colours[r.id]};--fg:${light.includes(r.id) ? "#111" : "#fff"}">${esc(r.name)}<small>${historical ? "Archive" : esc(st?.status || "Status unavailable")}</small></span><i class="status ${historical || !st ? "" : statusClass(st.severity)}" title="${historical ? "Historical service status unavailable" : esc(st?.status || "status unavailable")}"></i></span><span class="elo">${Math.round(r.elo)}</span><span>${r.on_time.toLocaleString()}</span><span>${r.late.toLocaleString()}</span><span>${r.cancelled.toLocaleString()}</span></button>`;
         })
         .join("");
     $("#lines").onclick = (e) => {
@@ -158,13 +161,13 @@ function frame(body, min, max, times) {
 }
 function chartDimensions() {
     const mobile = innerWidth <= 650;
-    const width = mobile ? Math.max(290, $('#history-chart').clientWidth) : 1100;
-    const height = mobile ? 300 : 380;
+    const width = Math.max(290, $('#history-chart').clientWidth);
+    const height = mobile ? 300 : 400;
     return {width,height,left:mobile?42:55,right:width-(mobile?12:30),bottom:height-67,range:height-92};
 }
 function charts() {
     const dimensions = chartDimensions();
-    $('#history h2').textContent = enabled.size === 11 ? 'all eleven lines'
+    $('#history h2').textContent = enabled.size === 11 ? 'All eleven lines'
         : enabled.size === 1 ? rows.find(row => enabled.has(row.id))?.name || 'line history'
         : `${enabled.size} lines`;
     const historical = $("#dataset").value === "archive",
@@ -281,7 +284,7 @@ function charts() {
 function events() {
     const historical = $("#dataset").value === "archive";
     $("#event-list").innerHTML = historical
-        ? '<p class="note">The recovered archive contains aggregate ratings and counts. Individual raw events remain in the original SQLite database linked under Why.</p>'
+        ? '<p class="note">The recovered archive contains aggregate ratings and counts. Individual raw events remain in the original SQLite database linked in the repository provenance.</p>'
         : live.events
               .slice(-100)
               .reverse()
@@ -333,7 +336,13 @@ async function refresh() {
             observationFeed +
                 "?bucket=" +
                 Math.floor(Date.now() / 300000),
-        ).catch(() => get("data/events.json"));
+        ).then(value => {
+            observationSource = "durable feed";
+            return value;
+        }).catch(() => {
+            observationSource = "bundled snapshot";
+            return get("data/events.json");
+        });
         const serviceFeed = get('https://api.tfl.gov.uk/Line/Mode/tube/Status');
         const serviceResult = serviceFeed.then(value => ({value}), () => ({value:null}));
         live = await liveFeed;
@@ -347,11 +356,19 @@ async function refresh() {
                 statuses = [];
                 $('#connection').textContent = 'service feed unavailable';
             }
-        } else $("#connection").textContent = "service feed unavailable";
+        } else {
+            statuses = [];
+            $("#connection").textContent = "Service feed unavailable";
+        }
         render();
     } catch (e) {
         $("#notice").textContent =
-            "Train observations could not load. Refresh to retry.";
+            "Train observations could not load. Refresh to retry or choose the archive.";
+        $("#updated").textContent = live ? "Showing last loaded observations" : "Observation feed unavailable";
+        if (!live && !archive) {
+            $("#download").disabled = true;
+            $("#history-chart").innerHTML = '<p class="note">No observations loaded. Refresh to retry.</p>';
+        }
         console.error(e);
     } finally {
         b.disabled = false;
@@ -376,7 +393,7 @@ $("#download").onclick = () => {
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
-$("#history").after($("#leaderboard"));
+// Ranking precedes history in the DOM and on narrow screens.
 let resizeFrame;
 addEventListener('resize', () => {
     cancelAnimationFrame(resizeFrame);
